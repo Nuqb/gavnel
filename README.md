@@ -49,7 +49,7 @@ Medal and Outplayed are useful for people who want sharing tools, editors, or au
 **All three can save recordings locally.** The difference is what comes with that recording experience.
 
 <p align="center">
-  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf. Interface language options: Gavnel 86 including regional choices, with native-speaker review pending; Medal 22; Outplayed 1, English." width="100%">
+  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf to be installed. Interface language options: Gavnel 86 including regional choices, with native-speaker review pending; Medal 22; Outplayed 1, English." width="100%">
 </p>
 
 <details>
