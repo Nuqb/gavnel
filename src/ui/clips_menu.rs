@@ -1,34 +1,30 @@
 use super::*;
 use egui::{Align, FontId, Layout, Rect, Sense, Vec2};
 
-fn compact_duration(seconds: u32) -> String {
-    if seconds.is_multiple_of(60) {
-        format!("{}m", seconds / 60)
-    } else {
-        format!("{seconds}s")
-    }
-}
 fn duration_label(seconds: u32) -> String {
-    if seconds == 60 {
-        "1 minute".into()
-    } else if seconds.is_multiple_of(60) {
-        format!("{} minutes", seconds / 60)
+    if seconds.is_multiple_of(60) {
+        i18n::message("{minutes} min", &[("minutes", &(seconds / 60).to_string())])
     } else {
-        format!("{seconds} seconds")
+        i18n::message("{seconds} s", &[("seconds", &seconds.to_string())])
     }
 }
+
 pub(super) fn clip_button(
     ui: &mut egui::Ui,
     hotkey: &str,
     seconds: u32,
     open: bool,
 ) -> egui::Response {
-    let hotkey = if hotkey.is_empty() { "Not set" } else { hotkey };
+    let hotkey = if hotkey.is_empty() {
+        tr("Not set")
+    } else {
+        hotkey
+    };
     let key = ui
         .painter()
         .layout_no_wrap(hotkey.to_owned(), FontId::monospace(12.0), TEXT);
     let caption = ui.painter().layout_no_wrap(
-        format!("Clip {}", compact_duration(seconds)),
+        i18n::message("Clip {duration}", &[("duration", &duration_label(seconds))]),
         FontId::proportional(13.0),
         TEXT,
     );
@@ -64,11 +60,11 @@ pub(super) fn clip_button(
     );
     response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text("Clip hotkey and duration")
+        .on_hover_text(tr("Clip hotkey and duration"))
 }
 pub(super) fn manage_hotkeys_button(ui: &mut egui::Ui) -> egui::Response {
     ui.add(
-        egui::Button::new(RichText::new("Manage Hotkeys  →").size(12.0).strong())
+        egui::Button::new(RichText::new(tr("Manage Hotkeys  →")).size(12.0).strong())
             .frame_when_inactive(false),
     )
 }
@@ -83,19 +79,19 @@ impl Gavnel {
         super::widgets::quick_panel(
             ui,
             anchor,
-            egui::Id::new("clips-settings-menu"),
+            egui::Id::unique("clips-settings-menu"),
             &mut open,
             opened_from_toolbar,
             |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("CLIPS").size(11.0).color(MUTED).strong());
+                    ui.label(RichText::new(tr("CLIPS")).size(11.0).color(MUTED).strong());
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if manage_hotkeys_button(ui).clicked() {
                             self.page = Page::Settings;
                             self.settings_page = SettingsPage::Recording;
                             self.clips_open = false;
                             ui.ctx().data_mut(|data| {
-                                data.insert_temp(egui::Id::new("focus-hotkeys"), true)
+                                data.insert_temp(egui::Id::unique("focus-hotkeys"), true)
                             });
                             ui.close();
                         }
@@ -105,9 +101,9 @@ impl Gavnel {
                 ui.horizontal(|ui| {
                     let capturing = self.capturing_hotkey.load(Ordering::Relaxed);
                     let label = if capturing {
-                        "Press a key…"
+                        tr("Press a key…")
                     } else if self.settings.hotkey.is_empty() {
-                        "Not set"
+                        tr("Not set")
                     } else {
                         &self.settings.hotkey
                     };
@@ -158,7 +154,8 @@ mod tests {
     fn frame(ctx: &egui::Context, events: Vec<egui::Event>) -> (Rect, bool, egui::CursorIcon) {
         let mut rect = Rect::NOTHING;
         let mut clicked = false;
-        let output = ctx.run(
+        let output = crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(
                     egui::Pos2::ZERO,

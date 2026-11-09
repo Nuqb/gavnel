@@ -3,13 +3,13 @@ use super::*;
 use egui::{Align, Layout, Pos2, Rect, Sense};
 impl Gavnel {
     pub(super) fn settings_storage(&mut self, ui: &mut egui::Ui) {
-        section(ui, "Storage Settings", |ui| {
+        section(ui, tr("Storage Settings"), |ui| {
             ui.separator();
             let available = ui.available_width();
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.set_width((available - 210.0).max(300.0));
-                    ui.label(RichText::new("Capture Folder Location").strong());
+                    ui.label(RichText::new(tr("Capture Folder Location")).strong());
                     ui.horizontal(|ui| {
                         let width = ui.available_width() - 100.0;
                         let field = super::widgets::field(ui, &mut self.storage_text, width);
@@ -21,7 +21,7 @@ impl Gavnel {
                             self.message = error.to_string();
                         }
                         if ui
-                            .add_sized([88.0, 38.0], egui::Button::new("Browse"))
+                            .add_sized([88.0, 38.0], egui::Button::new(tr("Browse")))
                             .clicked()
                         {
                             self.browse_clip_folder();
@@ -30,18 +30,18 @@ impl Gavnel {
                 });
                 ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
                     ui.vertical(|ui| {
-                        ui.label(RichText::new("Local Storage Limit").strong());
+                        ui.label(RichText::new(tr("Local Storage Limit")).strong());
                         super::motion::ComboBox::from_id_salt("storage-limit")
                             .selected_text(
                                 self.settings
                                     .storage_limit_gb
-                                    .map_or("No Limit".to_owned(), |gb| format!("{gb} GB")),
+                                    .map_or(tr("No Limit").to_owned(), |gb| format!("{gb} GB")),
                             )
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(
                                     &mut self.settings.storage_limit_gb,
                                     None,
-                                    "No Limit",
+                                    tr("No Limit"),
                                 );
                                 for gb in [10, 25, 50, 100, 250, 500, 1000] {
                                     ui.selectable_value(
@@ -66,11 +66,16 @@ impl Gavnel {
                         .map(|clip| clip.bytes)
                         .sum();
                     let other = space.total.saturating_sub(space.free).saturating_sub(clips);
-                    ui.label(RichText::new(format!("Drive {}", space.root)).strong());
-                    ui.label(format!(
-                        "{} of {} available",
-                        crate::storage::format_bytes(space.free),
-                        crate::storage::format_bytes(space.total)
+                    ui.label(
+                        RichText::new(i18n::message("Drive {name}", &[("name", &space.root)]))
+                            .strong(),
+                    );
+                    ui.label(i18n::message(
+                        "{free} of {total} available",
+                        &[
+                            ("free", &crate::storage::format_bytes(space.free)),
+                            ("total", &crate::storage::format_bytes(space.total)),
+                        ],
                     ));
                     let (rect, _) = ui
                         .allocate_exact_size(Vec2::new(ui.available_width(), 25.0), Sense::hover());
@@ -91,9 +96,9 @@ impl Gavnel {
                     }
                     ui.horizontal_wrapped(|ui| {
                         for (label, bytes, color) in [
-                            ("Clips", clips, ACCENT),
-                            ("Other", other, Color32::from_gray(100)),
-                            ("Available space", space.free, MUTED),
+                            (tr("Clips"), clips, ACCENT),
+                            (tr("Other"), other, Color32::from_gray(100)),
+                            (tr("Available space"), space.free, MUTED),
                         ] {
                             ui.colored_label(color, "■");
                             ui.label(format!("{label} {}", crate::storage::format_bytes(bytes)));
@@ -106,5 +111,12 @@ impl Gavnel {
                 }
             }
         });
+        ui.add_space(14.0);
+        if ui.button(tr("Organize existing clips")).clicked() {
+            match self.library.organize(&self.settings.clips_dir) {
+                Ok(()) => self.message = tr("Organizing recordings…").into(),
+                Err(error) => self.message = error.to_string(),
+            }
+        }
     }
 }

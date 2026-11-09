@@ -5,12 +5,12 @@ impl Gavnel {
     pub(super) fn clips(&mut self, ui: &mut egui::Ui, status: &Status) {
         let all = self.library.clips.lock().unwrap().clone();
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Library").size(27.0).strong());
+            ui.label(RichText::new(tr("Library")).size(27.0).strong());
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if icon_button(ui, Glyph::Folder, MUTED, "Open clips folder").clicked() {
+                if icon_button(ui, Glyph::Folder, MUTED, tr("Open clips folder")).clicked() {
                     self.open_folder();
                 }
-                if icon_button(ui, Glyph::Refresh, MUTED, "Refresh library").clicked() {
+                if icon_button(ui, Glyph::Refresh, MUTED, tr("Refresh library")).clicked() {
                     self.library.refresh(&self.settings.clips_dir);
                 }
                 let width = (ui.available_width() - 120.0).clamp(145.0, 280.0);
@@ -25,8 +25,8 @@ impl Gavnel {
                             paint_icon(ui.painter(), r, Glyph::Search, MUTED);
                             ui.add(
                                 egui::TextEdit::singleline(&mut self.search)
-                                    .hint_text("Search your clips")
-                                    .frame(false)
+                                    .hint_text(tr("Search your clips"))
+                                    .frame(egui::Frame::NONE)
                                     .desired_width(width),
                             );
                         });
@@ -35,14 +35,14 @@ impl Gavnel {
         });
         ui.add_space(17.0);
         ui.horizontal(|ui| {
-            if tab(ui, "All clips", !self.settings.library_group_by_game).clicked() {
+            if tab(ui, tr("All clips"), !self.settings.library_group_by_game).clicked() {
                 self.settings.library_group_by_game = false;
             }
-            if tab(ui, "By game", self.settings.library_group_by_game).clicked() {
+            if tab(ui, tr("By game"), self.settings.library_group_by_game).clicked() {
                 self.settings.library_group_by_game = true;
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.label(RichText::new("On this PC").color(MUTED).size(12.0));
+                ui.label(RichText::new(tr("On this PC")).color(MUTED).size(12.0));
                 let (r, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
                 paint_icon(ui.painter(), r, Glyph::Folder, MUTED);
             });
@@ -57,12 +57,12 @@ impl Gavnel {
             super::motion::ComboBox::from_id_salt("game-filter")
                 .width(175.0)
                 .selected_text(if self.game_filter.is_empty() {
-                    "All games"
+                    tr("All games")
                 } else {
                     &self.game_filter
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.game_filter, String::new(), "All games");
+                    ui.selectable_value(&mut self.game_filter, String::new(), tr("All games"));
                     for game in games {
                         ui.selectable_value(&mut self.game_filter, game.clone(), game);
                     }
@@ -76,7 +76,7 @@ impl Gavnel {
                     } else {
                         MUTED
                     },
-                    "Change card size",
+                    tr("Change card size"),
                 )
                 .clicked()
                 {
@@ -85,25 +85,25 @@ impl Gavnel {
                 super::motion::ComboBox::from_id_salt("clip-sort")
                     .width(150.0)
                     .selected_text(match self.settings.library_sort {
-                        Sort::Newest => "Newest first",
-                        Sort::Oldest => "Oldest first",
-                        Sort::Largest => "Largest first",
+                        Sort::Newest => tr("Newest first"),
+                        Sort::Oldest => tr("Oldest first"),
+                        Sort::Largest => tr("Largest first"),
                     })
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.settings.library_sort,
                             Sort::Newest,
-                            "Newest first",
+                            tr("Newest first"),
                         );
                         ui.selectable_value(
                             &mut self.settings.library_sort,
                             Sort::Oldest,
-                            "Oldest first",
+                            tr("Oldest first"),
                         );
                         ui.selectable_value(
                             &mut self.settings.library_sort,
                             Sort::Largest,
-                            "Largest first",
+                            tr("Largest first"),
                         );
                     });
             });
@@ -132,9 +132,9 @@ impl Gavnel {
         if clips.is_empty() {
             ui.add_space(70.0);
             ui.vertical_centered(|ui| {
-                ui.heading("No matching clips");
-                ui.label(RichText::new("Try another game or search term.").color(MUTED));
-                if ui.button("Clear filters").clicked() {
+                ui.heading(tr("No matching clips"));
+                ui.label(RichText::new(tr("Try another game or search term.")).color(MUTED));
+                if ui.button(tr("Clear filters")).clicked() {
                     self.search.clear();
                     self.game_filter.clear();
                 }
@@ -189,13 +189,13 @@ impl Gavnel {
             );
             ui.add_space(14.0);
             ui.label(
-                RichText::new("Your moments belong here")
+                RichText::new(tr("Your moments belong here"))
                     .size(25.0)
                     .strong(),
             );
             ui.add_space(3.0);
             ui.label(
-                RichText::new("Start a game. Make a play. Press your clip key.")
+                RichText::new(tr("Start a game. Make a play. Press your clip key."))
                     .size(14.0)
                     .color(MUTED),
             );
@@ -205,9 +205,9 @@ impl Gavnel {
                 ui.add_space((ui.available_width() - total).max(0.0) / 2.0);
                 keycap(ui, &self.settings.hotkey);
                 ui.label(
-                    RichText::new(format!(
-                        "saves your last {} seconds",
-                        self.settings.replay_seconds
+                    RichText::new(i18n::message(
+                        "saves your last {seconds} s",
+                        &[("seconds", &self.settings.replay_seconds.to_string())],
                     ))
                     .color(MUTED),
                 );
@@ -216,7 +216,7 @@ impl Gavnel {
             if orange_button(
                 ui,
                 if status.armed {
-                    "Open capture controls"
+                    tr("Open capture controls")
                 } else {
                     self.recording_button(status)
                 },
@@ -231,9 +231,11 @@ impl Gavnel {
             }
             ui.add_space(24.0);
             ui.label(
-                RichText::new("Fortnite   /   Valorant   /   Rust   /   Counter-Strike 2")
-                    .size(11.0)
-                    .color(Color32::from_gray(108)),
+                RichText::new(tr(
+                    "Hundreds of supported games · Add custom games in Settings",
+                ))
+                .size(11.0)
+                .color(Color32::from_gray(108)),
             );
         });
     }

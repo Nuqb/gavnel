@@ -51,9 +51,9 @@ pub enum Command {
     Screenshot(Box<Settings>),
     Bookmark,
     SetOutputFolder(PathBuf),
-    SetFeedback(ClipFeedback),
+    SetFeedback(ClipFeedback, crate::i18n::Language),
     SetReplayPreferences(u32, Option<Vec<crate::capture_hotkeys::CaptureHotkey>>),
-    PreviewFeedback(ClipFeedback),
+    PreviewFeedback(ClipFeedback, crate::i18n::Language),
     Shutdown,
 }
 #[derive(Clone)]

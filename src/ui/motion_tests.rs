@@ -1,3 +1,4 @@
+use super::super::test_render::write_bitmap;
 use super::*;
 
 struct Harness {
@@ -43,7 +44,7 @@ impl Harness {
     }
     fn frame(&mut self, events: Vec<egui::Event>) -> egui::FullOutput {
         self.time += 1.0 / 60.0;
-        let output = self.ctx.run(
+        let mut output = self.ctx.run_ui(
             egui::RawInput {
                 time: Some(self.time),
                 screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, self.size)),
@@ -110,20 +111,25 @@ impl Harness {
                 }
             },
         );
-        for (id, delta) in &output.textures_delta.set {
-            let egui::ImageData::Color(image) = &delta.image;
-            if let Some([x, y]) = delta.pos {
-                let texture = self.textures.get_mut(id).unwrap();
-                for row in 0..image.size[1] {
-                    let start = (y + row) * texture.size[0] + x;
-                    texture.pixels[start..start + image.size[0]].copy_from_slice(
-                        &image.pixels[row * image.size[0]..(row + 1) * image.size[0]],
-                    );
+        for (id, deltas) in &output.textures_delta.set {
+            for delta in deltas {
+                let egui::ImageData::Color(image) = &delta.image;
+                if let Some([x, y]) = delta.pos {
+                    let texture = self.textures.get_mut(id).unwrap();
+                    for row in 0..image.resolution()[1] {
+                        let start = (y + row) * texture.resolution()[0] + x;
+                        texture.pixels_mut()[start..start + image.resolution()[0]].copy_from_slice(
+                            &image.pixels()
+                                [row * image.resolution()[0]..(row + 1) * image.resolution()[0]],
+                        );
+                    }
+                } else {
+                    self.textures.insert(*id, image.as_ref().clone());
                 }
-            } else {
-                self.textures.insert(*id, image.as_ref().clone());
             }
         }
+
+        output.textures_delta.clear();
         output
     }
     fn idle(&mut self, count: usize) -> egui::FullOutput {
@@ -131,6 +137,7 @@ impl Harness {
         for _ in 1..count {
             output = self.frame(vec![]);
         }
+        output.textures_delta.clear();
         output
     }
     fn click(&mut self, position: egui::Pos2) {
@@ -190,30 +197,6 @@ fn export_dropdown_animation_preview() {
         }
     }
     write_bitmap("work/dropdown-animation-preview.bmp", width, height, &sheet);
-}
-
-fn write_bitmap(path: &str, width: usize, height: usize, sheet: &[[u8; 3]]) {
-    use std::io::Write;
-    let mut file = std::fs::File::create(path).unwrap();
-    let stride = (width * 3).div_ceil(4) * 4;
-    file.write_all(b"BM").unwrap();
-    file.write_all(&((54 + stride * height) as u32).to_le_bytes())
-        .unwrap();
-    file.write_all(&[0; 4]).unwrap();
-    file.write_all(&54u32.to_le_bytes()).unwrap();
-    file.write_all(&40u32.to_le_bytes()).unwrap();
-    file.write_all(&(width as i32).to_le_bytes()).unwrap();
-    file.write_all(&(height as i32).to_le_bytes()).unwrap();
-    file.write_all(&1u16.to_le_bytes()).unwrap();
-    file.write_all(&24u16.to_le_bytes()).unwrap();
-    file.write_all(&[0; 24]).unwrap();
-    for y in (0..height).rev() {
-        for x in 0..width {
-            let p = sheet[y * width + x];
-            file.write_all(&[p[2], p[1], p[0]]).unwrap();
-        }
-        file.write_all(&vec![0; stride - width * 3]).unwrap();
-    }
 }
 
 fn delete_harness() -> Harness {
@@ -458,70 +441,7 @@ fn hotkey_panel_add_trigger_and_unset_controls_work() {
 }
 
 fn raster(h: &Harness, output: egui::FullOutput) -> Vec<[u8; 3]> {
-    let width = h.size.x as usize;
-    let height = h.size.y as usize;
-    let mut pixels = vec![[17, 17, 19]; width * height];
-    let edge = |a: egui::Pos2, b: egui::Pos2, p: egui::Pos2| {
-        (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x)
-    };
-    for primitive in h.ctx.tessellate(output.shapes, output.pixels_per_point) {
-        let egui::epaint::Primitive::Mesh(mesh) = primitive.primitive else {
-            continue;
-        };
-        let Some(texture) = h.textures.get(&mesh.texture_id) else {
-            continue;
-        };
-        for indices in mesh.indices.as_chunks::<3>().0 {
-            let vertices = indices.map(|i| mesh.vertices[i as usize]);
-            let bounds = Rect::from_points(&vertices.map(|v| v.pos))
-                .intersect(primitive.clip_rect)
-                .intersect(Rect::from_min_size(egui::Pos2::ZERO, h.size));
-            let area = edge(vertices[0].pos, vertices[1].pos, vertices[2].pos);
-            if area.abs() < 0.00001 {
-                continue;
-            }
-            for y in bounds.top().floor() as i32..bounds.bottom().ceil() as i32 {
-                for x in bounds.left().floor() as i32..bounds.right().ceil() as i32 {
-                    let p = egui::pos2(x as f32 + 0.5, y as f32 + 0.5);
-                    let weights = [
-                        edge(vertices[1].pos, vertices[2].pos, p) / area,
-                        edge(vertices[2].pos, vertices[0].pos, p) / area,
-                        edge(vertices[0].pos, vertices[1].pos, p) / area,
-                    ];
-                    if weights.iter().any(|v| *v < -0.00001) {
-                        continue;
-                    }
-                    let uv = vertices
-                        .iter()
-                        .zip(weights)
-                        .fold(Vec2::ZERO, |sum, (v, w)| sum + v.uv.to_vec2() * w);
-                    let tx = (uv.x * texture.size[0] as f32)
-                        .floor()
-                        .clamp(0.0, (texture.size[0] - 1) as f32)
-                        as usize;
-                    let ty = (uv.y * texture.size[1] as f32)
-                        .floor()
-                        .clamp(0.0, (texture.size[1] - 1) as f32)
-                        as usize;
-                    let texel = texture.pixels[ty * texture.size[0] + tx].to_array();
-                    let mut color = [0.0f32; 4];
-                    for (v, w) in vertices.iter().zip(weights) {
-                        for (ch, value) in v.color.to_array().iter().enumerate() {
-                            color[ch] += *value as f32 / 255.0 * w;
-                        }
-                    }
-                    let alpha = color[3] * texel[3] as f32 / 255.0;
-                    let pixel = &mut pixels[y as usize * width + x as usize];
-                    for ch in 0..3 {
-                        pixel[ch] = (color[ch] * texel[ch] as f32
-                            + pixel[ch] as f32 * (1.0 - alpha))
-                            .clamp(0.0, 255.0) as u8;
-                    }
-                }
-            }
-        }
-    }
-    pixels
+    super::super::test_render::raster(&h.ctx, h.size, &h.textures, output)
 }
 
 #[test]

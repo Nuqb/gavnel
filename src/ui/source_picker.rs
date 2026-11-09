@@ -85,7 +85,7 @@ impl SourcePicker {
         active_source: &str,
         confirm_label: &str,
     ) -> Option<Action> {
-        let response = egui::Modal::new(egui::Id::new("capture-source-picker"))
+        let response = egui::Modal::new(egui::Id::unique("capture-source-picker"))
             .backdrop_color(Color32::from_black_alpha(175))
             .frame(
                 egui::Frame::new()
@@ -100,7 +100,7 @@ impl SourcePicker {
                 ui.columns(2, |columns| {
                     for (ui, (tab, label)) in columns
                         .iter_mut()
-                        .zip([(Tab::Game, "Game"), (Tab::Desktop, "Desktop")])
+                        .zip([(Tab::Game, tr("Game")), (Tab::Desktop, tr("Desktop"))])
                     {
                         let selected = self.tab == tab;
                         let response = ui.add_sized(
@@ -160,7 +160,7 @@ impl SourcePicker {
                             egui::pos2(rect.center().x, rect.top() + 86.0),
                             Align2::CENTER_CENTER,
                             if active_source.is_empty() {
-                                "Waiting for game to be detected"
+                                tr("Waiting for game to be detected")
                             } else {
                                 active_source
                             },
@@ -183,7 +183,7 @@ impl SourcePicker {
                                     self.window
                                         .and_then(|id| windows.iter().find(|w| w.handle == id))
                                         .map(|w| w.title.as_str())
-                                        .unwrap_or("Select your game process…"),
+                                        .unwrap_or(tr("Select your game process…")),
                                 )
                                 .show_ui(ui, |ui| {
                                     for window in windows {
@@ -194,8 +194,13 @@ impl SourcePicker {
                                         );
                                     }
                                 });
-                            if icon_button(ui, Glyph::Refresh, MUTED, "Refresh running programs")
-                                .clicked()
+                            if icon_button(
+                                ui,
+                                Glyph::Refresh,
+                                MUTED,
+                                tr("Refresh running programs"),
+                            )
+                            .clicked()
                             {
                                 action = Some(Action::Refresh);
                             }
@@ -204,7 +209,7 @@ impl SourcePicker {
                         if ui
                             .add(
                                 egui::Button::new(
-                                    RichText::new("Automatic game detection").color(ACCENT),
+                                    RichText::new(tr("Automatic game detection")).color(ACCENT),
                                 )
                                 .frame_when_inactive(false),
                             )
@@ -259,7 +264,10 @@ impl SourcePicker {
                                         ui.painter().text(
                                             band.left_center() + Vec2::new(10.0, 0.0),
                                             Align2::LEFT_CENTER,
-                                            format!("DISPLAY {}", monitor.index),
+                                            i18n::message(
+                                                "Screen {number}",
+                                                &[("number", &monitor.index.to_string())],
+                                            ),
                                             FontId::proportional(14.0),
                                             TEXT,
                                         );
@@ -288,7 +296,7 @@ impl SourcePicker {
                                 });
                             });
                         if monitors.is_empty() {
-                            ui.label("No displays available");
+                            ui.label(tr("No displays available"));
                         }
                     }
                 }
@@ -297,7 +305,7 @@ impl SourcePicker {
                     if ui
                         .add_sized(
                             [180.0, 36.0],
-                            egui::Button::new("Close").frame_when_inactive(false),
+                            egui::Button::new(tr("Close")).frame_when_inactive(false),
                         )
                         .clicked()
                     {
@@ -336,11 +344,11 @@ impl Gavnel {
     }
     pub(super) fn show_source_picker(&mut self, ctx: &egui::Context, status: &Status) {
         let label = if status.armed {
-            "Continue"
+            tr("Continue")
         } else if self.settings.recording_mode.full() {
-            "Start Recording"
+            tr("Start Recording")
         } else {
-            "Start Clipping"
+            tr("Start Clipping")
         };
         let action = self.source_picker.as_mut().and_then(|picker| {
             picker.show(ctx, &self.windows, &self.monitors, &status.source, label)
@@ -430,7 +438,8 @@ mod tests {
     ) -> (Option<Action>, egui::CursorIcon) {
         let (windows, monitors) = data();
         let mut action = None;
-        let output = ctx.run(
+        let output = crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(
                     egui::Pos2::ZERO,
@@ -484,7 +493,7 @@ mod tests {
         }
         let rect = ctx.memory(|memory| {
             memory
-                .area_rect(egui::Id::new("capture-source-picker"))
+                .area_rect(egui::Id::unique("capture-source-picker"))
                 .unwrap()
         });
         let pos = egui::pos2(rect.center().x, rect.top() + 145.0);
@@ -520,7 +529,7 @@ mod tests {
         }
         let rect = ctx.memory(|memory| {
             memory
-                .area_rect(egui::Id::new("capture-source-picker"))
+                .area_rect(egui::Id::unique("capture-source-picker"))
                 .unwrap()
         });
         click(
@@ -532,7 +541,7 @@ mod tests {
         frame(&ctx, &mut picker, vec![]);
         let rect = ctx.memory(|memory| {
             memory
-                .area_rect(egui::Id::new("capture-source-picker"))
+                .area_rect(egui::Id::unique("capture-source-picker"))
                 .unwrap()
         });
         click(

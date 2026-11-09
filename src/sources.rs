@@ -2,7 +2,7 @@ mod preview;
 use crate::config::{CaptureMode, Settings};
 use anyhow::{Context, Result, bail};
 pub use preview::monitor_preview;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use windows::{
     Graphics::{
         Capture::*,
@@ -120,6 +120,30 @@ pub fn monitors() -> Vec<MonitorInfo> {
 mod recording_label_tests {
     use super::*;
     #[test]
+    fn automatic_matching_preserves_custom_games_and_prefers_foreground() {
+        let mut settings = Settings::default();
+        settings.add_game_profile("Custom", "MyGame.exe").unwrap();
+        let window = |handle, executable: &str| WindowInfo {
+            handle,
+            title: "Window".into(),
+            executable: executable.into(),
+        };
+        let windows = vec![
+            window(1, "chrome.exe"),
+            window(2, "STONESHard.EXE"),
+            window(3, "mygame.EXE"),
+        ];
+        assert_eq!(
+            automatic_window(windows.clone(), &settings, 3)
+                .unwrap()
+                .handle,
+            3
+        );
+        assert_eq!(automatic_window(windows, &settings, 1).unwrap().handle, 2);
+        assert!(automatic_window(vec![window(4, "javaw.exe")], &settings, 4).is_none());
+    }
+
+    #[test]
     fn game_folders_follow_profile_names_and_other_windows_follow_the_app() {
         let settings = Settings::default();
         let mut window = WindowInfo {
@@ -208,6 +232,23 @@ impl Target {
         }
     }
 }
+fn automatic_window(
+    windows: Vec<WindowInfo>,
+    settings: &Settings,
+    foreground: usize,
+) -> Option<WindowInfo> {
+    // One profile pass per scan instead of one pass for every open window.
+    let executables: HashSet<_> = settings
+        .profiles
+        .iter()
+        .map(|profile| profile.executable.to_ascii_lowercase())
+        .collect();
+    windows
+        .into_iter()
+        .filter(|window| executables.contains(&window.executable.to_ascii_lowercase()))
+        .min_by_key(|window| window.handle != foreground)
+}
+
 pub fn resolve(settings: &Settings) -> Result<Option<Target>> {
     if settings.mode == CaptureMode::Monitor {
         return Ok(Some(Target::Monitor(settings.monitor_index)));
@@ -215,17 +256,7 @@ pub fn resolve(settings: &Settings) -> Result<Option<Target>> {
     let windows = windows();
     if settings.mode == CaptureMode::Automatic {
         let foreground = unsafe { GetForegroundWindow().0 as usize };
-        let mut matching: Vec<_> = windows
-            .into_iter()
-            .filter(|w| {
-                settings
-                    .profiles
-                    .iter()
-                    .any(|p| p.executable.eq_ignore_ascii_case(&w.executable))
-            })
-            .collect();
-        matching.sort_by_key(|w| w.handle != foreground);
-        return Ok(matching.into_iter().next().map(Target::Window));
+        return Ok(automatic_window(windows, settings, foreground).map(Target::Window));
     }
     let window = windows.into_iter().find(|w| {
         w.title == settings.window_title

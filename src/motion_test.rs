@@ -5,9 +5,10 @@ pub fn run() -> anyhow::Result<()> {
         start: std::time::Instant,
     }
     impl eframe::App for Motion {
-        fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        fn ui(&mut self, root: &mut egui::Ui, _: &mut eframe::Frame) {
+            let ctx = &root.ctx().clone();
             let t = self.start.elapsed().as_secs_f32();
-            egui::CentralPanel::default().show(ctx, |ui| {
+            egui::CentralPanel::default().show(root, |ui| {
                 let rect = ui.max_rect();
                 for x in 0..16 {
                     let value = (((t * 2.0 + x as f32 / 16.0).fract() * 255.0) as u8).max(20);

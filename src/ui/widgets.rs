@@ -104,25 +104,27 @@ fn recording_mode_options() -> [(RecordingMode, &'static str, &'static str); 3] 
     [
         (
             RecordingMode::Clips,
-            "Manual capture",
-            "Use shortcuts for clips, bookmarks, and starting or stopping a long recording.",
+            tr("Manual capture"),
+            tr("Use shortcuts for clips, bookmarks, and starting or stopping a long recording."),
         ),
         (
             RecordingMode::AutomaticSessions,
-            "Automatically record entire game session",
-            "Gavnel records when a supported game opens and saves when it closes. Clip hotkeys still work.",
+            tr("Automatically record entire game session"),
+            tr(
+                "Gavnel records when a supported game opens and saves when it closes. Clip hotkeys still work.",
+            ),
         ),
         (
             RecordingMode::Off,
-            "Recording off",
-            "Turns off capture. No clips or full recordings will be captured.",
+            tr("Recording off"),
+            tr("Turns off capture. No clips or full recordings will be captured."),
         ),
     ]
 }
 
 fn recording_mode_help_content(ui: &mut egui::Ui) {
     ui.set_max_width(340.0);
-    ui.label(RichText::new("Recording modes").size(16.0).strong());
+    ui.label(RichText::new(tr("Recording modes")).size(16.0).strong());
     for (_, title, description) in recording_mode_options() {
         ui.add_space(10.0);
         ui.label(RichText::new(title).strong());
@@ -138,9 +140,9 @@ pub(super) fn recording_mode_help(ui: &mut egui::Ui) {
     );
     response.widget_info(|| {
         egui::WidgetInfo::labeled(
-            egui::WidgetType::Button,
+            egui::Role::Button,
             ui.is_enabled(),
-            "About recording modes",
+            tr("About recording modes"),
         )
     });
     response.clone().on_hover_ui(recording_mode_help_content);
@@ -168,13 +170,13 @@ pub(super) fn dropdown<T: Copy + PartialEq>(
         .iter()
         .find(|(option, _)| *option == *value)
         .map(|(_, title)| *title)
-        .unwrap_or("Custom");
+        .unwrap_or(tr("Custom"));
     super::motion::ComboBox::from_id_salt(id)
         .width(ui.available_width().min(380.0))
-        .selected_text(selected)
+        .selected_text(tr(selected))
         .show_ui(ui, |ui| {
             for (option, title) in options {
-                ui.selectable_value(value, *option, *title);
+                ui.selectable_value(value, *option, tr(title));
             }
         });
 }
@@ -407,7 +409,8 @@ mod popup_tests {
         selected: u32,
     }
     fn frame(ctx: &egui::Context, state: &mut PanelTest, events: Vec<egui::Event>) {
-        let _ = ctx.run(
+        let _ = crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(
                     egui::Pos2::ZERO,
@@ -418,20 +421,24 @@ mod popup_tests {
             },
             |ctx| {
                 egui::CentralPanel::default().show(ctx, |ui| {
-                    let anchor = ui.button("Recorder");
+                    let anchor = ui.button(tr("Recorder"));
                     quick_panel(
                         ui,
                         &anchor,
-                        egui::Id::new("test-settings"),
+                        egui::Id::unique("test-settings"),
                         &mut state.open,
                         false,
                         |ui| {
                             let response = super::motion::ComboBox::from_id_salt("microphone-test")
-                                .selected_text("Off")
+                                .selected_text(tr("Off"))
                                 .show_ui(ui, |ui| {
                                     state.option =
-                                        ui.selectable_value(&mut state.selected, 0, "Off").rect;
-                                    ui.selectable_value(&mut state.selected, 1, "Windows default");
+                                        ui.selectable_value(&mut state.selected, 0, tr("Off")).rect;
+                                    ui.selectable_value(
+                                        &mut state.selected,
+                                        1,
+                                        tr("Windows default"),
+                                    );
                                 });
                             state.combo = response.response.rect;
                             state.combo_id = response.response.id;
@@ -505,7 +512,8 @@ mod recording_mode_tests {
         mode: &mut RecordingMode,
         events: Vec<egui::Event>,
     ) -> egui::FullOutput {
-        ctx.run(
+        crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(
                     egui::Pos2::ZERO,
@@ -516,7 +524,7 @@ mod recording_mode_tests {
             },
             |ctx| {
                 egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.heading("Recording Mode");
+                    ui.heading(tr("Recording Mode"));
                     recording_modes(ui, mode);
                 });
             },
@@ -537,11 +545,11 @@ mod recording_mode_tests {
         let mut mode = RecordingMode::Clips;
         for (title, expected) in [
             (
-                "Automatically record entire game session",
+                tr("Automatically record entire game session"),
                 RecordingMode::AutomaticSessions,
             ),
-            ("Recording off", RecordingMode::Off),
-            ("Manual capture", RecordingMode::Clips),
+            (tr("Recording off"), RecordingMode::Off),
+            (tr("Manual capture"), RecordingMode::Clips),
         ] {
             let selected_title = recording_mode_options()
                 .into_iter()
@@ -614,7 +622,8 @@ mod editable_slider_tests {
         events: Vec<egui::Event>,
     ) -> egui::Rect {
         let mut rect = egui::Rect::NOTHING;
-        let _ = ctx.run(
+        let _ = crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
                     egui::Pos2::ZERO,
@@ -709,7 +718,8 @@ mod hover_feedback_tests {
         pos: Option<egui::Pos2>,
     ) -> (egui::Rect, egui::FullOutput) {
         let mut rect = egui::Rect::NOTHING;
-        let output = ctx.run(
+        let output = crate::ui::test_render::run(
+            ctx,
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
                     egui::Pos2::ZERO,

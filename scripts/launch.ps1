@@ -1,4 +1,4 @@
-param([switch]$BuildOnly, [switch]$Background)
+param([switch]$BuildOnly, [switch]$Background, [switch]$OnboardingPreview)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -32,6 +32,10 @@ try {
     $app = Join-Path $runDir 'Gavnel.exe'
     New-Item -ItemType Directory -Force $runDir | Out-Null
     if (-not (Test-Path -LiteralPath $app)) { Copy-Item -LiteralPath $built -Destination $app }
+    if ($OnboardingPreview) {
+        Start-Process -FilePath $app -ArgumentList '--onboarding-preview' -WorkingDirectory $projectRoot -WindowStyle Normal
+        exit 0
+    }
     $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like '*gavnel*' -and $_.Path -and $_.Path.StartsWith($projectRoot + '\', [StringComparison]::OrdinalIgnoreCase) })
     $older = @($running | Where-Object { $_.Path -ne $app })
     if ($older.Count -gt 0) {

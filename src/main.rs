@@ -10,6 +10,7 @@ mod diagnostics;
 mod engine;
 mod export;
 mod feedback;
+mod i18n;
 mod icons;
 mod library;
 mod microphone;
@@ -23,11 +24,15 @@ mod screenshot;
 mod sources;
 mod storage;
 mod thumbnails;
+mod typography;
 mod ui;
 mod verify;
 mod video;
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|arg| arg == "--onboarding-preview") {
+        return ui::onboarding::preview::run();
+    }
     if diagnostics::early(&args)? {
         return Ok(());
     }

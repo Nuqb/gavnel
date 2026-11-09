@@ -55,3 +55,26 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+## Noto fonts
+
+Bundled Noto Sans script fonts and the Noto Sans CJK collection are distributed
+under the SIL Open Font License 1.1. Original copyright notices and complete
+licenses accompany each family in `assets/fonts/`. Source URLs and SHA-256 hashes
+are recorded in `assets/fonts/manifest.json`. No Windows font is redistributed.
+
+## Pinned egui text-direction changes
+
+The MIT/Apache-2.0 egui family is pinned to
+`87476c112a338f8940c64979dc6b46b90612e195` from
+https://github.com/ahmedhosnypro/egui, corresponding to upstream proposal
+https://github.com/emilk/egui/pull/8818. The patch adds Unicode bidirectional
+layout and selection handling. See Cargo.lock for the resolved companion crates
+and unicode-bidi dependency. Preserve upstream license notices with distribution.
+
+## Translation drafts
+
+Expanded catalogs were initially generated offline using Google's MADLAD-400 3B
+(Apache-2.0), then edited for UI context and formatting. Model weights and the
+translator are not distributed with Gavnel. Provenance and pending review status
+are recorded in `assets/localization-status.json`.

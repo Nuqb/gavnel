@@ -3,7 +3,11 @@ use super::*;
 fn rgb(r: u8, g: u8, b: u8) -> COLORREF {
     COLORREF(r as u32 | (g as u32) << 8 | (b as u32) << 16)
 }
-pub(super) unsafe fn draw(dc: HDC, scale: f32, toast: &Toast) {
+pub(super) unsafe fn draw(dc: HDC, scale: f32, toast: &Toast, language: crate::i18n::Language) {
+    crate::i18n::with_language(language, || unsafe { draw_localized(dc, scale, toast) });
+}
+
+unsafe fn draw_localized(dc: HDC, scale: f32, toast: &Toast) {
     unsafe {
         let px = |v: i32| (v as f32 * scale).round() as i32;
         let rect = |x, y, r, b| RECT {
@@ -71,6 +75,11 @@ pub(super) unsafe fn draw(dc: HDC, scale: f32, toast: &Toast) {
         SelectObject(dc, old);
         let _ = DeleteObject(pen.into());
         SetBkMode(dc, TRANSPARENT);
+        let family: Vec<u16> =
+            crate::typography::native_family(crate::i18n::current_language().code())
+                .encode_utf16()
+                .chain(Some(0))
+                .collect();
         for (text, size, weight, bounds, color) in [
             (
                 &toast.title,
@@ -101,17 +110,25 @@ pub(super) unsafe fn draw(dc: HDC, scale: f32, toast: &Toast) {
                 CLIP_DEFAULT_PRECIS,
                 CLEARTYPE_QUALITY,
                 0,
-                w!("Segoe UI"),
+                windows::core::PCWSTR(family.as_ptr()),
             );
             let old = SelectObject(dc, font.into());
             SetTextColor(dc, color);
             let mut bounds = bounds;
-            let mut wide: Vec<_> = text.encode_utf16().collect();
+            let mut wide: Vec<_> = crate::i18n::tr(text).encode_utf16().collect();
             DrawTextW(
                 dc,
                 &mut wide,
                 &mut bounds,
-                DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX,
+                DT_SINGLELINE
+                    | DT_VCENTER
+                    | DT_END_ELLIPSIS
+                    | DT_NOPREFIX
+                    | if crate::i18n::is_rtl() {
+                        DT_RTLREADING | DT_RIGHT
+                    } else {
+                        DT_LEFT
+                    },
             );
             SelectObject(dc, old);
             let _ = DeleteObject(font.into());

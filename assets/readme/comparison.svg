@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1120" height="782" viewBox="0 0 1120 782" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1120" height="874" viewBox="0 0 1120 874" role="img" aria-labelledby="title desc">
   <title id="title">Gavnel, Medal, and Outplayed at a glance</title>
-  <desc id="desc">All three save local files. Gavnel has no ads, paid plans, or cloud uploads. Medal and Outplayed have ads on the free tier, optional Premium, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf.</desc>
+  <desc id="desc">All three save local files. Gavnel has no ads, paid plans, or cloud uploads. Medal and Outplayed have ads on the free tier, optional Premium, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf. Interface language and regional options: Gavnel 86, with independent native-speaker review pending; Medal 22; Outplayed 1, English.</desc>
   <defs>
     <clipPath id="frame">
-      <rect width="1120" height="782" rx="24" />
+      <rect width="1120" height="874" rx="24" />
     </clipPath>
   </defs>
   <g clip-path="url(#frame)" font-family="Segoe UI, Arial, sans-serif">
-    <rect width="1120" height="782" rx="24" fill="#19191e" />
-    <rect x="1" y="1" width="1118" height="780" rx="23" fill="none" stroke="#34343d" />
+    <rect width="1120" height="874" rx="24" fill="#19191e" />
+    <rect x="1" y="1" width="1118" height="872" rx="23" fill="none" stroke="#34343d" />
     <text x="38" y="48" font-size="13" fill="#ffad60" font-weight="700" text-anchor="start">THE SHORT VERSION</text>
     <text x="38" y="91" font-size="30" fill="#f5f3f0" font-weight="700" text-anchor="start">Three ways to keep a moment.</text>
-    <rect x="298" y="122" width="256" height="578" rx="20" fill="#ff893b" fill-opacity=".065" stroke="#ff893b" stroke-opacity=".40" />
+    <rect x="298" y="122" width="256" height="646" rx="20" fill="#ff893b" fill-opacity=".065" stroke="#ff893b" stroke-opacity=".40" />
     <g transform="translate(400 140) scale(.42)">
       <rect x="4" y="4" width="120" height="120" rx="28" fill="#252529" />
       <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.25" fill="none" stroke="#3b3b41" stroke-width="1.5" />
@@ -1123,7 +1123,20 @@
     <path d="m418 653 5.5 5.5 10.5-11" fill="none" stroke="#e0dce5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
     <path d="m682 653 5.5 5.5 10.5-11" fill="none" stroke="#e0dce5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
     <text x="954" y="660" font-size="21" fill="#e0dce5" font-weight="600" text-anchor="middle">None</text>
-    <text x="38" y="734" font-size="15" fill="#aaa5b0">Checks mean present. Ads are on free tiers; paid plans and uploads are optional.</text>
-    <text x="38" y="758" font-size="15" fill="#aaa5b0">Outplayed requires Overwolf. Account details and sources are in the README.</text>
+    <g>
+      <path d="M38 686h1044" stroke="#ffffff" stroke-opacity=".065" />
+      <g transform="translate(42 708)" fill="none" stroke="#92909b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13" cy="13" r="11" />
+        <ellipse cx="13" cy="13" rx="5" ry="11" />
+        <path d="M2 13h22M5 6h16M5 20h16" />
+      </g>
+      <text x="85" y="728" font-size="20" fill="#cbc8d1">Language options</text>
+    </g>
+    <text x="426" y="728" font-size="23" fill="#ffdbb7" font-weight="600" text-anchor="middle">86*</text>
+    <text x="690" y="728" font-size="23" fill="#e0dce5" font-weight="600" text-anchor="middle">22</text>
+    <text x="954" y="728" font-size="23" fill="#e0dce5" font-weight="600" text-anchor="middle">1 (English)</text>
+    <text x="38" y="802" font-size="15" fill="#aaa5b0">Checks mean present. Ads are on free tiers; paid plans and uploads are optional.</text>
+    <text x="38" y="826" font-size="15" fill="#aaa5b0">Language counts include regional options. *Gavnel translations await native-speaker review.</text>
+    <text x="38" y="850" font-size="15" fill="#aaa5b0">Outplayed requires Overwolf. Account details and language sources are in the README.</text>
   </g>
 </svg>

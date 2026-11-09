@@ -3,21 +3,25 @@ use crate::capture_hotkeys::{
     CaptureAction, CaptureHotkey, HotkeyTrigger, LONG_PRESS_DELAY, RegisteredShortcut,
 };
 
-fn parse_bindings(settings: &Settings) -> Result<Vec<RegisteredShortcut>> {
+pub(super) fn parse_bindings(settings: &Settings) -> Result<Vec<RegisteredShortcut>> {
     let mut result: Vec<RegisteredShortcut> = Vec::new();
     for binding in settings.capture_bindings() {
         if binding.key.is_empty() {
             continue;
         }
-        let key: HotKey = binding
-            .key
-            .parse()
-            .with_context(|| format!("Choose a valid shortcut for {}.", binding.action.label()))?;
+        let key: HotKey = binding.key.parse().with_context(|| {
+            i18n::message(
+                "Choose a valid shortcut for {action}.",
+                &[("action", tr(binding.action.label()))],
+            )
+        })?;
         anyhow::ensure!(
             !result
                 .iter()
                 .any(|old| old.key == key && old.binding.trigger == binding.trigger),
-            "That key combination and trigger are already assigned. Choose another key or trigger."
+            tr(
+                "That key combination and trigger are already assigned. Choose another key or trigger."
+            )
         );
         result.push(RegisteredShortcut { key, binding });
     }
@@ -120,7 +124,7 @@ impl Gavnel {
             .edit_capture_bindings()
             .iter_mut()
             .find(|b| b.id == self.capturing_action)
-            .context("This hotkey was removed. Add it again to set a key.")?
+            .context(tr("This hotkey was removed. Add it again to set a key."))?
             .key = value;
         parse_bindings(&candidate)?;
         candidate.sync_primary_bindings();
@@ -129,7 +133,7 @@ impl Gavnel {
     }
     pub(super) fn toggle_long_recording(&mut self) {
         if self.settings.recording_mode == RecordingMode::Off {
-            self.message = "Choose a recording mode to enable long recording.".into();
+            self.message = tr("Choose a recording mode to enable long recording.").into();
             return;
         }
         match self.apply() {
@@ -152,10 +156,13 @@ impl Gavnel {
                     for key in registered {
                         let _ = self.hotkeys.unregister(key);
                     }
-                    anyhow::bail!(
-                        "{} shortcut is already in use. Choose another. {error}",
-                        entry.binding.action.label()
-                    );
+                    anyhow::bail!(i18n::message(
+                        "{action} shortcut is already in use. Choose another. {error}",
+                        &[
+                            ("action", tr(entry.binding.action.label())),
+                            ("error", &error.to_string())
+                        ]
+                    ));
                 }
                 registered.push(entry.key);
             }
@@ -208,20 +215,16 @@ fn icon(action: CaptureAction) -> (&'static str, &'static [u8], Color32) {
         ),
     }
 }
-fn action_icon(ui: &mut egui::Ui, action: CaptureAction) {
+pub(super) fn action_icon(ui: &mut egui::Ui, action: CaptureAction) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(18.0), egui::Sense::hover());
     let (name, bytes, color) = icon(action);
     crate::icons::paint(ui.painter(), name, bytes, rect, color);
 }
 fn duration_label(seconds: u32) -> String {
     if seconds.is_multiple_of(60) {
-        format!(
-            "{} minute{}",
-            seconds / 60,
-            if seconds == 60 { "" } else { "s" }
-        )
+        i18n::message("{minutes} min", &[("minutes", &(seconds / 60).to_string())])
     } else {
-        format!("{seconds} seconds")
+        i18n::message("{seconds} s", &[("seconds", &seconds.to_string())])
     }
 }
 
@@ -254,7 +257,7 @@ pub(super) fn hotkeys_panel(
             ui.set_min_width((ui.available_width() - 1.0).max(0.0));
             ui.spacing_mut().item_spacing.y = 8.0;
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Recording Hotkeys").size(16.0).strong());
+                ui.label(RichText::new(tr("Recording Hotkeys")).size(16.0).strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let texture = crate::icons::texture(
                         ui.ctx(),
@@ -264,7 +267,7 @@ pub(super) fn hotkeys_panel(
                     );
                     let response = ui.add(egui::Button::image_and_text(
                         egui::Image::new((texture.id(), Vec2::splat(14.0))).tint(TEXT),
-                        "Add Hotkey",
+                        tr("Add Hotkey"),
                     ));
                     egui::Popup::menu(&response).show(|ui| {
                         for action in CaptureAction::ALL {
@@ -273,7 +276,7 @@ pub(super) fn hotkeys_panel(
                                 if ui
                                     .add_enabled(
                                         settings.capture_bindings().len() < 32,
-                                        egui::Button::new(action.label()),
+                                        egui::Button::new(tr(action.label())),
                                     )
                                     .clicked()
                                 {
@@ -300,19 +303,21 @@ pub(super) fn hotkeys_panel(
                             |ui| {
                                 ui.set_min_width(label_width);
                                 action_icon(ui, binding.action);
-                                ui.label(RichText::new(binding.action.label()).strong());
+                                ui.label(RichText::new(tr(binding.action.label())).strong());
                                 if binding.action == CaptureAction::Bookmark {
                                     ui.label(
-                                        RichText::new("(long recording)").size(11.0).color(MUTED),
+                                        RichText::new(tr("(long recording)"))
+                                            .size(11.0)
+                                            .color(MUTED),
                                     );
                                 }
                             },
                         );
                         let listening = capturing == Some(binding.id);
                         let key = if listening {
-                            "Press keys…"
+                            tr("Press keys…")
                         } else if binding.key.is_empty() {
-                            "Not set"
+                            tr("Not set")
                         } else {
                             &binding.key
                         };
@@ -329,7 +334,7 @@ pub(super) fn hotkeys_panel(
                                     .fill(if listening { ACCENT_DARK } else { BG })
                                     .corner_radius(6.0),
                             )
-                            .on_hover_text("Click to set shortcut. Escape cancels.")
+                            .on_hover_text(tr("Click to set shortcut. Escape cancels."))
                             .clicked()
                         {
                             selected = Some(binding.id);
@@ -351,21 +356,21 @@ pub(super) fn hotkeys_panel(
                         super::motion::ComboBox::from_id_salt("trigger")
                             .width(116.0)
                             .selected_text(match binding.trigger {
-                                HotkeyTrigger::Tap => "Tap",
-                                HotkeyTrigger::LongPress => "Long press",
+                                HotkeyTrigger::Tap => tr("Tap"),
+                                HotkeyTrigger::LongPress => tr("Long press"),
                             })
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(
                                     &mut binding.trigger,
                                     HotkeyTrigger::Tap,
-                                    "Tap",
+                                    tr("Tap"),
                                 );
                                 ui.selectable_value(
                                     &mut binding.trigger,
                                     HotkeyTrigger::LongPress,
-                                    "Long press",
+                                    tr("Long press"),
                                 )
-                                .on_hover_text("Hold for half a second to activate once.");
+                                .on_hover_text(tr("Hold for half a second to activate once."));
                             });
                         super::motion::vertical_menu_button(ui, |ui| {
                             ui.set_min_width(136.0);
@@ -374,7 +379,7 @@ pub(super) fn hotkeys_panel(
                             if ui
                                 .add_enabled(
                                     !binding.key.is_empty(),
-                                    egui::Button::new("Unset hotkey"),
+                                    egui::Button::new(tr("Unset hotkey")),
                                 )
                                 .clicked()
                             {
@@ -382,7 +387,8 @@ pub(super) fn hotkeys_panel(
                                 ui.close();
                             }
                             if removable_actions.contains(&binding.action)
-                                && widgets::destructive_button(ui, "Remove hotkey", false).clicked()
+                                && widgets::destructive_button(ui, tr("Remove hotkey"), false)
+                                    .clicked()
                             {
                                 remove = Some(binding.id);
                                 ui.close();
@@ -392,7 +398,7 @@ pub(super) fn hotkeys_panel(
                 });
             }
             if settings.capture_bindings().is_empty() {
-                ui.label(RichText::new("Add a hotkey to get started.").color(MUTED));
+                ui.label(RichText::new(tr("Add a hotkey to get started.")).color(MUTED));
             }
         });
     if let Some(id) = remove {

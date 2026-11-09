@@ -54,6 +54,33 @@ Run `cargo fmt` after code edits. The build-only launcher checks the runnable re
 
 ## Diagnostics
 
+### Test onboarding independently
+
+Use **Settings → General → Setup → Preview setup**, or run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -OnboardingPreview
+```
+
+This builds and opens an isolated setup window alongside a running recorder. It
+does not request that recorder to exit, register recording hotkeys, save preferences,
+change startup registration, or record the screen. Finish and Skip both reach a
+preview-complete screen with a **Try setup again** button. Actual setup is available
+through **Run setup again**; there is no need to delete configuration files.
+
+First-run detection and completion, draft isolation, shortcut conflicts and replay
+length, navigation, and the minimum window size have automated regression checks.
+To export all seven screens with generated test devices and no app window:
+
+```powershell
+cargo test --locked export_onboarding_previews -- --ignored
+```
+
+The images are written under `work/onboarding/`. The preview command is also
+available directly as `gavnel.exe --onboarding-preview`.
+
+### Recorder diagnostics
+
 Build a debug executable with `cargo build --locked`, then use the appropriate explicit command:
 
 ```powershell
@@ -80,3 +107,27 @@ The following commands **make new recordings**. Choose an appropriate local outp
 ## License
 
 Gavnel is [MIT licensed](../LICENSE). See [third-party notices](../THIRD_PARTY_NOTICES.md) for bundled dependency licenses.
+
+## Localization
+
+Read [the localization guide](localization.md) before adding or changing user-facing
+text. Bundled catalogs live under `assets/locales`; use whole-message translations
+and review regional variants. Run `python scripts/check-locales.py` as well as the
+Rust checks. Native-language review status is tracked in the guide.
+
+The UI requires Rust 1.95 or newer. The text renderer and companion egui crates
+are pinned to revision `87476c112a338f8940c64979dc6b46b90612e195` of the
+[upstream RTL proposal](https://github.com/emilk/egui/pull/8818). Keep them aligned;
+mixing registry and patched companion crates breaks their shared APIs. This is
+an unreleased fix, approved for this project; review replacement revisions before
+updating. Local verification passed 83 epaint tests and 11 text-selection tests,
+plus the app's mixed Hebrew/Latin/numeral regression. These checks are not a
+substitute for native RTL text-input testing.
+
+Bundled font source URLs and hashes are in `assets/fonts/manifest.json`; retain
+each OFL license on redistribution. Translation generation tools and model caches
+are development-only ignored files under `work/`, never runtime dependencies.
+
+When packaging a binary, include `THIRD_PARTY_NOTICES.md` and the accompanying
+`assets/fonts/*-OFL.txt` and `assets/fonts/*-LICENSE.txt` files. The fonts are
+embedded in the executable; the notices must still accompany redistribution.

@@ -2,7 +2,7 @@
 name = "gavnel"
 version = "0.2.6"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.95"
 description = "A lightweight Windows replay clipper with GPU capture and NVIDIA hardware encoding"
 license = "MIT"
 
@@ -12,8 +12,8 @@ bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 crossbeam-channel = "0.5"
 directories = "6"
-eframe = { version = "0.33", default-features = false, features = ["default_fonts", "glow"] }
-egui_extras = { version = "0.33", default-features = false, features = ["svg"] }
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow"] }
+egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 global-hotkey = "0.7"
 mini-nvcodec = "0.1.0"
 mp4 = "0.14"
@@ -50,3 +50,12 @@ tempfile = "3"
 
 [build-dependencies]
 winresource = "0.1"
+
+# User-approved, pinned upstream text-direction fix: egui PR #8818.
+[patch.crates-io]
+egui = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }
+epaint = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }
+eframe = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }
+egui_extras = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }
+egui_glow = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }
+egui-winit = { git = "https://github.com/ahmedhosnypro/egui", rev = "87476c112a338f8940c64979dc6b46b90612e195" }

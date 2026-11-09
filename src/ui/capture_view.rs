@@ -4,8 +4,8 @@ use egui::{Align, Layout, Sense};
 impl Gavnel {
     fn source_controls(&mut self, ui: &mut egui::Ui) {
         if self.settings.recording_mode.automatic() {
-            ui.label(RichText::new("Entire sessions use automatic game detection. Choose Manual capture to record a monitor or window with the long-recording shortcut.").color(MUTED));
-            if ui.button("Manage supported games").clicked() {
+            ui.label(RichText::new(tr("Entire sessions use automatic game detection. Choose Manual capture to record a monitor or window with the long-recording shortcut.")).color(MUTED));
+            if ui.button(tr("Manage supported games")).clicked() {
                 self.page = Page::Settings;
                 self.settings_page = SettingsPage::Games;
             }
@@ -13,33 +13,35 @@ impl Gavnel {
         }
         let width = ui.available_width().min(480.0);
         ui.allocate_ui_with_layout(Vec2::new(width,0.0),Layout::top_down(Align::Min),|ui|{
-            super::widgets::segments(ui,&mut self.settings.mode,&[(CaptureMode::Automatic,"Game"),(CaptureMode::Monitor,"Monitor"),(CaptureMode::Window,"Window")]);
+            super::widgets::segments(ui,&mut self.settings.mode,&[(CaptureMode::Automatic,tr("Game")),(CaptureMode::Monitor,tr("Monitor")),(CaptureMode::Window,tr("Window"))]);
             ui.add_space(10.0);
             match self.settings.mode{
-                CaptureMode::Automatic=>{ui.label(RichText::new("Automatically detect Fortnite, Valorant, Rust, CS2, and your custom game profiles.").size(13.0).color(MUTED));},
-                CaptureMode::Monitor=>{super::motion::ComboBox::from_id_salt("capture-monitor").width(width).selected_text(self.monitors.iter().find(|m|m.index==self.settings.monitor_index).map(|m|m.label.as_str()).unwrap_or("Choose a monitor")).show_ui(ui,|ui|{for m in &self.monitors{ui.selectable_value(&mut self.settings.monitor_index,m.index,&m.label);}});ui.label(RichText::new("Includes everything visible on this monitor after Alt-Tab.").size(12.0).color(MUTED));},
-                CaptureMode::Window=>{super::motion::ComboBox::from_id_salt("capture-window").width(width).selected_text(if self.settings.window_title.is_empty(){"Choose a running program"}else{&self.settings.window_title}).show_ui(ui,|ui|{for w in &self.windows{if ui.selectable_label(self.settings.window_title==w.title,&w.title).clicked(){self.settings.window_title=w.title.clone();self.settings.window_executable=w.executable.clone();}}});ui.label(RichText::new("Video goes black when unfocused; audio continues.").size(12.0).color(MUTED));}
+                CaptureMode::Automatic=>{ui.label(RichText::new(tr("Automatically detect thousands of supported games and your custom game profiles.")).size(13.0).color(MUTED));},
+                CaptureMode::Monitor=>{super::motion::ComboBox::from_id_salt("capture-monitor").width(width).selected_text(self.monitors.iter().find(|m|m.index==self.settings.monitor_index).map(|m|m.label.as_str()).unwrap_or(tr("Choose a monitor"))).show_ui(ui,|ui|{for m in &self.monitors{ui.selectable_value(&mut self.settings.monitor_index,m.index,&m.label);}});ui.label(RichText::new(tr("Includes everything visible on this monitor after Alt-Tab.")).size(12.0).color(MUTED));},
+                CaptureMode::Window=>{super::motion::ComboBox::from_id_salt("capture-window").width(width).selected_text(if self.settings.window_title.is_empty(){tr("Choose a running program")}else{&self.settings.window_title}).show_ui(ui,|ui|{for w in &self.windows{if ui.selectable_label(self.settings.window_title==w.title,&w.title).clicked(){self.settings.window_title=w.title.clone();self.settings.window_executable=w.executable.clone();}}});ui.label(RichText::new(tr("Video goes black when unfocused; audio continues.")).size(12.0).color(MUTED));}
             }
-            if ui.add(egui::Button::new("Refresh sources").min_size(Vec2::new(130.0,34.0))).clicked(){self.windows=sources::windows();self.monitors=sources::monitors();}
+            if ui.add(egui::Button::new(tr("Refresh sources")).min_size(Vec2::new(130.0,34.0))).clicked(){self.windows=sources::windows();self.monitors=sources::monitors();}
         });
     }
     pub(super) fn capture(&mut self, ui: &mut egui::Ui, status: &Status) {
-        ui.label(RichText::new("Capture").size(27.0).strong());
+        ui.label(RichText::new(tr("Capture")).size(27.0).strong());
         ui.label(
-            RichText::new("Record a full session or keep recent moments ready to clip.")
-                .color(MUTED),
+            RichText::new(tr(
+                "Record a full session or keep recent moments ready to clip.",
+            ))
+            .color(MUTED),
         );
         ui.add_space(20.0);
-        section(ui, "Recorder", |ui| {
+        section(ui, tr("Recorder"), |ui| {
             ui.horizontal(|ui| {
                 badge(
                     ui,
                     if status.recording {
                         "RECORDING"
                     } else if status.armed {
-                        "WAITING FOR GAME"
+                        tr("WAITING FOR GAME")
                     } else {
-                        "OFF"
+                        tr("OFF")
                     },
                     if status.armed { ACCENT_DARK } else { CARD },
                     if status.armed { ACCENT } else { MUTED },
@@ -57,7 +59,7 @@ impl Gavnel {
             ui.add_space(10.0);
             ui.label(
                 RichText::new(if status.source.is_empty() {
-                    "No game selected"
+                    tr("No game selected")
                 } else {
                     &status.source
                 })
@@ -76,7 +78,7 @@ impl Gavnel {
                         .color(ACCENT),
                 );
                 ui.label(
-                    RichText::new("Writing full recording to disk · Stop & save to finish")
+                    RichText::new(tr("Writing full recording to disk · Stop & save to finish"))
                         .size(12.0)
                         .color(MUTED),
                 );
@@ -92,18 +94,21 @@ impl Gavnel {
             ui.add_space(6.0);
             ui.horizontal(|ui| {
                 ui.label(
-                    RichText::new(format!(
-                        "{:.0} / {} seconds buffered",
-                        status.buffered, self.settings.replay_seconds
+                    RichText::new(i18n::message(
+                        "{buffered} / {seconds} s buffered",
+                        &[
+                            ("buffered", &format!("{:.0}", status.buffered)),
+                            ("seconds", &self.settings.replay_seconds.to_string()),
+                        ],
                     ))
                     .color(MUTED)
                     .size(12.0),
                 );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.label(
-                        RichText::new(format!(
-                            "{} replay memory",
-                            crate::storage::format_bytes(status.memory as u64)
+                        RichText::new(i18n::message(
+                            "{size} replay memory",
+                            &[("size", &crate::storage::format_bytes(status.memory as u64))],
                         ))
                         .color(MUTED)
                         .size(12.0),
@@ -121,9 +126,9 @@ impl Gavnel {
                         egui::Button::new(format!(
                             "{}  ·  {}",
                             if status.full_recording {
-                                "Add bookmark"
+                                tr("Add bookmark")
                             } else {
-                                "Save clip"
+                                tr("Save clip")
                             },
                             self.settings.hotkey
                         )),
@@ -135,28 +140,28 @@ impl Gavnel {
             });
         });
         ui.add_space(14.0);
-        section(ui, "Video capture source", |ui| {
+        section(ui, tr("Video capture source"), |ui| {
             self.source_controls(ui);
             ui.add_space(10.0);
-            if ui.button("Apply source").clicked()
+            if ui.button(tr("Apply source")).clicked()
                 && let Err(e) = self.apply()
             {
                 self.message = e.to_string();
             }
         });
         ui.add_space(14.0);
-        section(ui, "Audio", |ui| {
+        section(ui, tr("Audio"), |ui| {
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::hover());
                 paint_icon(ui.painter(), r, Glyph::Volume, MUTED);
-                ui.label("PC audio included automatically");
+                ui.label(tr("Automatic PC audio"));
                 ui.separator();
                 ui.label(if self.settings.microphone {
                     "Microphone included"
                 } else {
-                    "Microphone off"
+                    tr("Microphone off")
                 });
-                if ui.button("Configure").clicked() {
+                if ui.button(tr("Configure")).clicked() {
                     self.page = Page::Settings;
                     self.settings_page = SettingsPage::Audio;
                 }
@@ -164,10 +169,7 @@ impl Gavnel {
         });
         ui.add_space(15.0);
         ui.label(
-            RichText::new(format!(
-                "Delivered: {:.1} FPS   ·   Fresh source: {:.1} FPS   ·   Dropped: {}   ·   Captures saved: {}",
-                status.capture_fps, status.fresh_fps, status.dropped, status.saved_count
-            ))
+            RichText::new(i18n::message("Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}", &[("delivered", &format!("{:.1}", status.capture_fps)), ("fresh", &format!("{:.1}", status.fresh_fps)), ("dropped", &status.dropped.to_string()), ("saved", &status.saved_count.to_string())]))
             .color(MUTED)
             .size(12.0),
         );

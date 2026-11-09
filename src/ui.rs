@@ -2,8 +2,11 @@ mod capture_view;
 mod clip_card;
 mod clips_menu;
 mod delete;
+use crate::typography as fonts;
+mod language;
 mod library_view;
 mod motion;
+pub(crate) mod onboarding;
 mod playback;
 mod preferences;
 mod quick;
@@ -16,12 +19,15 @@ mod settings_storage;
 mod shortcuts;
 mod source_card;
 mod source_picker;
+#[cfg(test)]
+mod test_render;
 mod theme;
 mod toolbar;
 mod tray;
 mod views;
 mod widgets;
 
+use crate::i18n::{self, tr};
 use crate::{
     audio::{self, AudioDevice},
     config::{CaptureMode, LibrarySort as Sort, RecordingMode, Settings},
@@ -81,6 +87,7 @@ enum QuickPage {
     Audio,
 }
 pub struct Gavnel {
+    onboarding: Option<onboarding::Wizard>,
     context: egui::Context,
     player: Option<crate::player::Player>,
     parent_window: windows::Win32::Foundation::HWND,
@@ -94,6 +101,7 @@ pub struct Gavnel {
     hotkey: Arc<Mutex<Vec<crate::capture_hotkeys::RegisteredShortcut>>>,
     pressed_hotkeys: Arc<Mutex<crate::capture_hotkeys::PressedShortcuts>>,
     tray: Option<TrayIcon>,
+    tray_items: Vec<(MenuItem, &'static str)>,
     visible: Arc<AtomicBool>,
     quitting: Arc<AtomicBool>,
     monitors: Vec<MonitorInfo>,
@@ -165,12 +173,16 @@ impl Gavnel {
             ctx: ctx.clone(),
             visible: visible.clone(),
         });
-        engine.send(Command::SetFeedback(settings.clip_feedback.clone()))?;
+        engine.send(Command::SetFeedback(
+            settings.clip_feedback.clone(),
+            settings.language,
+        ))?;
         let active = Arc::new(Mutex::new(settings.clone()));
         let hotkeys = GlobalHotKeyManager::new()?;
         let library = Library::new(ctx.clone(), visible.clone());
         let thumbnails = Thumbnails::new(ctx.clone(), visible.clone());
         let mut app = Self {
+            onboarding: None,
             context: ctx.clone(),
             player: None,
             parent_window,
@@ -185,6 +197,7 @@ impl Gavnel {
             hotkey: Arc::new(Mutex::new(Vec::new())),
             pressed_hotkeys: Arc::new(Mutex::new(Default::default())),
             tray: None,
+            tray_items: Vec::new(),
             visible,
             quitting,
             monitors: sources::monitors(),
@@ -229,7 +242,10 @@ impl Gavnel {
             }
         };
         app.library.refresh(&app.settings.clips_dir);
-        if !lifecycle_test && app.settings.start_on_launch(background) {
+        if !lifecycle_test && !app.settings.onboarding_completed {
+            app.begin_onboarding();
+            app.window_actions.show();
+        } else if !lifecycle_test && app.settings.start_on_launch(background) {
             app.engine
                 .send(Command::Start(Box::new(app.settings.clone())))?;
         }
@@ -248,7 +264,7 @@ impl Gavnel {
         if self.settings.recording_mode == RecordingMode::Off {
             self.page = Page::Settings;
             self.settings_page = SettingsPage::Recording;
-            self.message = "Choose a recording mode to enable capture.".into();
+            self.message = tr("Choose a recording mode to enable capture.").into();
             return;
         }
         if status.armed {
@@ -263,18 +279,18 @@ impl Gavnel {
     fn recording_button(&self, status: &Status) -> &'static str {
         if status.armed {
             if status.full_recording {
-                "Stop & save"
+                tr("Stop & save")
             } else {
-                "Stop capture"
+                tr("Stop capture")
             }
         } else if self.settings.recording_mode == RecordingMode::Off {
-            "Recording off"
+            tr("Recording off")
         } else if self.settings.recording_mode.automatic() {
-            "Enable auto recording"
+            tr("Enable auto recording")
         } else if self.settings.recording_mode.full() {
-            "Start recording"
+            tr("Start recording")
         } else {
-            "Start clipping"
+            tr("Start clipping")
         }
     }
     fn recording_mode_controls(&mut self, ui: &mut egui::Ui, _status: &Status) {
@@ -324,11 +340,11 @@ impl Gavnel {
                 let candidate = parts.join("+");
                 if candidate.parse::<HotKey>().is_ok() {
                     match self.select_shortcut(candidate) {
-                        Ok(()) => self.message = "Shortcut selected.".into(),
+                        Ok(()) => self.message = tr("Shortcut selected.").into(),
                         Err(error) => self.message = error.to_string(),
                     }
                 } else {
-                    self.message="That key cannot be used as a global shortcut. Try a function key or key combination.".into();
+                    self.message=tr("That key cannot be used as a global shortcut. Try a function key or key combination.").into();
                 }
                 return;
             }
@@ -345,112 +361,123 @@ impl Gavnel {
     }
 }
 impl eframe::App for Gavnel {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.quitting.load(Ordering::Acquire) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-            return;
-        }
-        if ctx.input(|i| i.viewport().close_requested())
-            && !self.quitting.load(Ordering::Relaxed)
-            && self.tray.is_some()
-            && self.settings.close_to_tray
-        {
-            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            if self.settings != *self.active.lock().unwrap()
-                && let Err(error) = self.apply()
+    fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = &root.ctx().clone();
+        i18n::with_language(self.settings.language, || {
+            if self.quitting.load(Ordering::Acquire) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                return;
+            }
+            if ctx.input(|i| i.viewport().close_requested())
+                && !self.quitting.load(Ordering::Relaxed)
+                && self.tray.is_some()
+                && self.settings.close_to_tray
+                && self.onboarding.is_none()
             {
-                self.message = error.to_string();
-            }
-            self.window_actions.hide();
-            if let Some(player) = &self.player {
-                let _ = player.pause();
-            }
-            return;
-        }
-        if !self.visible.load(Ordering::Relaxed) && !self.quitting.load(Ordering::Relaxed) {
-            return;
-        }
-        let status = self.engine.snapshot();
-        if let Some(notice) = self.library.notice.lock().unwrap().take() {
-            self.message = notice;
-            self.textures.clear();
-        }
-        if self.started.elapsed().as_secs_f32() >= 1.8 {
-            if self
-                .logo_cycle
-                .is_some_and(|start| start.elapsed().as_secs_f32() >= 1.8)
-            {
-                self.logo_cycle = None;
-            }
-            if self.logo_cycle.is_none() && status.saving > 0 {
-                self.logo_cycle = Some(Instant::now());
-            }
-        }
-        self.capture_hotkey(ctx);
-        if self.logo_phase().is_some() {
-            ctx.request_repaint_after(Duration::from_millis(16));
-        }
-        if status.saved_count != self.last_saved {
-            self.last_saved = status.saved_count;
-            self.library.refresh(&self.settings.clips_dir);
-        }
-        if self.page == Page::Clips && self.last_library.elapsed() > Duration::from_secs(5) {
-            self.last_library = Instant::now();
-            self.library.refresh(&self.settings.clips_dir);
-        }
-        self.draw(ctx, &status);
-        self.show_source_picker(ctx, &status);
-        let changed = self.settings != *self.active.lock().unwrap();
-        if changed {
-            let edited = self.settings_edited.get_or_insert_with(Instant::now);
-            if ctx.input(|input| {
-                input.pointer.any_down()
-                    || input.events.iter().any(|event| {
-                        matches!(
-                            event,
-                            egui::Event::Text(_) | egui::Event::Key { pressed: true, .. }
-                        )
-                    })
-            }) {
-                *edited = Instant::now();
-            } else if edited.elapsed() >= Duration::from_millis(400) {
-                if let Err(error) = self.apply() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                if self.settings != *self.active.lock().unwrap()
+                    && let Err(error) = self.apply()
+                {
                     self.message = error.to_string();
                 }
+                self.window_actions.hide();
+                if let Some(player) = &self.player {
+                    let _ = player.pause();
+                }
+                return;
+            }
+            if !self.visible.load(Ordering::Relaxed) && !self.quitting.load(Ordering::Relaxed) {
+                return;
+            }
+            if self.onboarding.is_some() {
+                self.show_onboarding(root);
+                return;
+            }
+            fonts::ensure_language(ctx, self.settings.language.code());
+            let status = self.engine.snapshot();
+            if let Some(notice) = self.library.notice.lock().unwrap().take() {
+                self.message = notice;
+                self.textures.clear();
+            }
+            if self.started.elapsed().as_secs_f32() >= 1.8 {
+                if self
+                    .logo_cycle
+                    .is_some_and(|start| start.elapsed().as_secs_f32() >= 1.8)
+                {
+                    self.logo_cycle = None;
+                }
+                if self.logo_cycle.is_none() && status.saving > 0 {
+                    self.logo_cycle = Some(Instant::now());
+                }
+            }
+            self.capture_hotkey(ctx);
+            if self.logo_phase().is_some() {
+                ctx.request_repaint_after(Duration::from_millis(16));
+            }
+            if status.saved_count != self.last_saved {
+                self.last_saved = status.saved_count;
+                self.library.refresh(&self.settings.clips_dir);
+            }
+            if self.page == Page::Clips && self.last_library.elapsed() > Duration::from_secs(5) {
+                self.last_library = Instant::now();
+                self.library.refresh(&self.settings.clips_dir);
+            }
+            i18n::with_language(self.settings.language, || {
+                self.draw(root, &status);
+                self.show_source_picker(ctx, &status);
+            });
+            let changed = self.settings != *self.active.lock().unwrap();
+            if changed {
+                let edited = self.settings_edited.get_or_insert_with(Instant::now);
+                if ctx.input(|input| {
+                    input.pointer.any_down()
+                        || input.events.iter().any(|event| {
+                            matches!(
+                                event,
+                                egui::Event::Text(_) | egui::Event::Key { pressed: true, .. }
+                            )
+                        })
+                }) {
+                    *edited = Instant::now();
+                } else if edited.elapsed() >= Duration::from_millis(400) {
+                    if let Err(error) = self.apply() {
+                        self.message = error.to_string();
+                    }
+                    self.settings_edited = None;
+                }
+                ctx.request_repaint_after(Duration::from_millis(100));
+            } else {
                 self.settings_edited = None;
             }
-            ctx.request_repaint_after(Duration::from_millis(100));
-        } else {
-            self.settings_edited = None;
-        }
-        motion::finish(ctx);
-        if self.page != Page::Player {
-            self.player = None;
-        }
-        if let Some(path) = self.delete_pending.clone() {
-            let clip = self
-                .library
-                .clips
-                .lock()
-                .unwrap()
-                .iter()
-                .find(|clip| clip.path == path)
-                .cloned();
-            match delete::show(ctx, &path, clip.as_ref(), self.delete_error.as_deref()) {
+            motion::finish(ctx);
+            if self.page != Page::Player {
+                self.player = None;
+            }
+            if let Some(path) = self.delete_pending.clone() {
+                let clip = self
+                    .library
+                    .clips
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .find(|clip| clip.path == path)
+                    .cloned();
+                match delete::show(ctx, &path, clip.as_ref(), self.delete_error.as_deref()) {
                 delete::Action::Cancel => { self.delete_pending = None; self.delete_error = None; },
                 delete::Action::Delete => match crate::library::delete_capture(&path) {
                     Ok(()) => {
                         self.textures.remove(&path);
                         self.library.refresh(&self.settings.clips_dir);
-                        self.message = "Clip deleted.".into();
+                        self.message = tr("Clip deleted.").into();
                         self.delete_pending = None;
                         self.delete_error = None;
                     },
-                    Err(_) => self.delete_error = Some("Could not delete this clip. It may have moved or be open in another player. Close this dialog and refresh the Library, then try again.".into()),
+                    Err(_) => self.delete_error = Some(tr("Could not delete this clip. It may have moved or be open in another player. Close this dialog and refresh the Library, then try again.").into()),
                 },
                 delete::Action::None => {},
             }
-        }
+            }
+        });
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         // Save before the engine shuts down; shutdown itself must not turn the
