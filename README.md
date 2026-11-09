@@ -48,15 +48,15 @@ Medal and Outplayed are useful for people who want sharing tools, editors, or au
 **All three can save recordings locally.** The difference is what comes with that recording experience.
 
 <p align="center">
-  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads." width="100%">
+  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf." width="100%">
 </p>
 
 <details>
 <summary><strong>Sources &amp; accessible text version</strong></summary>
 
-- **Gavnel:** local files; no ads, paid tier, or cloud uploads; standalone native app.
-- **Medal:** [local files][medal-local]; [free-tier ads, Premium, and cloud options][medal-plans].
-- **Outplayed:** [local files][outplayed-local]; [free-tier ads, Premium, and optional hosting][outplayed-plans]; [Overwolf client required][outplayed-app]. Login is required to access Outplayed, though recording continues while logged out.
+- **Gavnel:** local files; no ads, paid tier, cloud uploads, or account requirement; standalone native app.
+- **Medal:** [local files][medal-local]; [free-tier ads, Premium, and cloud options][medal-plans]; [account required][medal-account]; standalone app.
+- **Outplayed:** [local files][outplayed-local]; [free-tier ads, Premium, and optional hosting][outplayed-plans]; [Overwolf client required][outplayed-app]. [Account required to access Outplayed][outplayed-plans], though recording continues while logged out.
 
 Official product icons: [Medal support](https://support.medal.tv/) and [Outplayed](https://outplayed.tv/). Their marks belong to their respective owners and identify the products being compared.
 
@@ -127,3 +127,5 @@ Read the [user guide](docs/usage.md) for recording modes, audio, storage, and pl
 [outplayed-local]: https://support.overwolf.com/support/solutions/articles/9000284626-outplayed-faq
 [outplayed-performance]: https://support.overwolf.com/support/solutions/articles/9000181387-common-capture-issues
 [overwolf-codecs]: https://support.overwolf.com/support/solutions/articles/9000177861-video-codec-selection-and-availability
+
+[medal-account]: https://support.medal.tv/support/solutions/articles/48001147502/
