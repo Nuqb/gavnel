@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+<title id="title">Gavnel — your best plays, saved on your PC.</title>
+<desc id="desc">Gavnel's orange icon on a dark background, with local files, no ads, and no account as the product principles.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#17171b"/><stop offset="1" stop-color="#242025"/></linearGradient><radialGradient id="glow"><stop stop-color="#ff893b" stop-opacity=".15"/><stop offset="1" stop-color="#ff893b" stop-opacity="0"/></radialGradient><clipPath id="frame"><rect width="1200" height="360" rx="24"/></clipPath></defs>
+<g clip-path="url(#frame)">
+<rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+<rect x="1" y="1" width="1198" height="358" rx="23" fill="none" stroke="#36343a"/>
+<circle cx="1010" cy="157" r="250" fill="url(#glow)"/>
+<path d="M820 0v360M900 0v360M980 0v360M1060 0v360M1140 0v360M790 80h410M790 160h410M790 240h410M790 320h410" stroke="#ffffff" stroke-opacity=".035"/>
+<g font-family="Segoe UI, Arial, sans-serif">
+<text x="58" y="65" fill="#ffad60" font-size="13" font-weight="700" letter-spacing="3">LOCAL GAMEPLAY RECORDER</text>
+<text x="54" y="163" fill="#f5f3f0" font-size="88" font-weight="700" letter-spacing="-3">Gavnel</text>
+<text x="58" y="217" fill="#c9c6cc" font-size="27">Your best plays. Saved on your PC.</text>
+<g fill="#ffad60" font-size="12" font-weight="700" letter-spacing="1.2">
+<rect x="58" y="270" width="146" height="34" rx="17" fill="#ff893b" fill-opacity=".10" stroke="#ff893b" stroke-opacity=".28"/><text x="81" y="292">LOCAL FILES</text>
+<rect x="216" y="270" width="111" height="34" rx="17" fill="#ff893b" fill-opacity=".10" stroke="#ff893b" stroke-opacity=".28"/><text x="242" y="292">NO ADS</text>
+<rect x="339" y="270" width="159" height="34" rx="17" fill="#ff893b" fill-opacity=".10" stroke="#ff893b" stroke-opacity=".28"/><text x="362" y="292">NO ACCOUNT</text>
+</g>
+<text x="1016" y="296" text-anchor="middle" fill="#a29ca6" font-size="13" letter-spacing="2">PLAY · CLIP · KEEP</text>
+</g>
+<g transform="translate(918 70) scale(1.55)">
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#252529"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.25" fill="none" stroke="#3b3b41" stroke-width="1.5"/>
+  <g transform="rotate(32 64 64)">
+    <path d="M50 46V36c0-8 5-15 14-21 9 6 14 13 14 21v10Z" fill="#ffad60"/>
+    <rect x="48" y="50" width="32" height="39" rx="4" fill="#ff893b"/>
+    <path d="M57 37c0-4 2-8 6-11" fill="none" stroke="#ffe3c3" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+    <path d="M56 57v23" fill="none" stroke="#ffc38b" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+    <rect x="46" y="93" width="36" height="7" rx="3.5" fill="#ffad60"/>
+  </g>
+</g>
+</g>
+</svg>
