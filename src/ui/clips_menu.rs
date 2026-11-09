@@ -1,0 +1,211 @@
+use super::*;
+use egui::{Align, FontId, Layout, Rect, Sense, Vec2};
+
+fn compact_duration(seconds: u32) -> String {
+    if seconds.is_multiple_of(60) {
+        format!("{}m", seconds / 60)
+    } else {
+        format!("{seconds}s")
+    }
+}
+fn duration_label(seconds: u32) -> String {
+    if seconds == 60 {
+        "1 minute".into()
+    } else if seconds.is_multiple_of(60) {
+        format!("{} minutes", seconds / 60)
+    } else {
+        format!("{seconds} seconds")
+    }
+}
+pub(super) fn clip_button(
+    ui: &mut egui::Ui,
+    hotkey: &str,
+    seconds: u32,
+    open: bool,
+) -> egui::Response {
+    let hotkey = if hotkey.is_empty() { "Not set" } else { hotkey };
+    let key = ui
+        .painter()
+        .layout_no_wrap(hotkey.to_owned(), FontId::monospace(12.0), TEXT);
+    let caption = ui.painter().layout_no_wrap(
+        format!("Clip {}", compact_duration(seconds)),
+        FontId::proportional(13.0),
+        TEXT,
+    );
+    let key_width = (key.size().x + 12.0).max(32.0);
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(key_width + caption.size().x + 25.0, 38.0),
+        Sense::click(),
+    );
+    ui.painter().rect_filled(
+        rect,
+        8.0,
+        if response.hovered() || open {
+            Color32::from_rgb(45, 45, 50)
+        } else {
+            CARD
+        },
+    );
+    let key_rect = Rect::from_center_size(
+        egui::pos2(rect.left() + 4.0 + key_width / 2.0, rect.center().y),
+        Vec2::new(key_width, 32.0),
+    );
+    ui.painter()
+        .rect_filled(key_rect, 6.0, Color32::from_rgb(55, 55, 61));
+    ui.painter()
+        .galley(key_rect.center() - key.size() / 2.0, key, TEXT);
+    ui.painter().galley(
+        egui::pos2(
+            key_rect.right() + 9.0,
+            rect.center().y - caption.size().y / 2.0,
+        ),
+        caption,
+        TEXT,
+    );
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text("Clip hotkey and duration")
+}
+pub(super) fn manage_hotkeys_button(ui: &mut egui::Ui) -> egui::Response {
+    ui.add(
+        egui::Button::new(RichText::new("Manage Hotkeys  →").size(12.0).strong())
+            .frame_when_inactive(false),
+    )
+}
+impl Gavnel {
+    pub(super) fn clips_menu(
+        &mut self,
+        ui: &mut egui::Ui,
+        anchor: &egui::Response,
+        opened_from_toolbar: bool,
+    ) {
+        let mut open = self.clips_open;
+        super::widgets::quick_panel(
+            ui,
+            anchor,
+            egui::Id::new("clips-settings-menu"),
+            &mut open,
+            opened_from_toolbar,
+            |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("CLIPS").size(11.0).color(MUTED).strong());
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if manage_hotkeys_button(ui).clicked() {
+                            self.page = Page::Settings;
+                            self.settings_page = SettingsPage::Recording;
+                            self.clips_open = false;
+                            ui.ctx().data_mut(|data| {
+                                data.insert_temp(egui::Id::new("focus-hotkeys"), true)
+                            });
+                            ui.close();
+                        }
+                    });
+                });
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    let capturing = self.capturing_hotkey.load(Ordering::Relaxed);
+                    let label = if capturing {
+                        "Press a key…"
+                    } else if self.settings.hotkey.is_empty() {
+                        "Not set"
+                    } else {
+                        &self.settings.hotkey
+                    };
+                    if ui
+                        .add_sized(
+                            [196.0, 40.0],
+                            egui::Button::new(RichText::new(label).font(FontId::monospace(14.0)))
+                                .fill(if capturing { ACCENT_DARK } else { BG })
+                                .corner_radius(6.0),
+                        )
+                        .clicked()
+                    {
+                        self.capturing_action = self.settings.primary_clip_id();
+                        self.pressed_hotkeys.lock().unwrap().clear();
+                        self.capturing_hotkey.store(true, Ordering::Relaxed);
+                        self.clips_capture_owned = true;
+                    }
+                    super::motion::ComboBox::from_id_salt("clip-menu-duration")
+                        .width(126.0)
+                        .selected_text(duration_label(self.settings.replay_seconds))
+                        .show_ui(ui, |ui| {
+                            for seconds in [5, 10, 15, 30, 45, 60, 90, 120] {
+                                if ui
+                                    .selectable_label(
+                                        self.settings.replay_seconds == seconds,
+                                        duration_label(seconds),
+                                    )
+                                    .clicked()
+                                {
+                                    self.settings.set_primary_clip_seconds(seconds);
+                                }
+                            }
+                        });
+                });
+            },
+        );
+        self.clips_open = open && self.clips_open;
+        if self.clips_capture_owned && !self.clips_open {
+            self.capturing_hotkey.store(false, Ordering::Relaxed);
+            self.clips_capture_owned = false;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn frame(ctx: &egui::Context, events: Vec<egui::Event>) -> (Rect, bool, egui::CursorIcon) {
+        let mut rect = Rect::NOTHING;
+        let mut clicked = false;
+        let output = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    Vec2::new(600.0, 200.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    let response = clip_button(ui, "F8", 60, false);
+                    rect = response.rect;
+                    clicked = response.clicked();
+                });
+            },
+        );
+        (rect, clicked, output.platform_output.cursor_icon)
+    }
+    #[test]
+    fn keybind_and_duration_are_one_click_target_with_hover_feedback() {
+        let ctx = egui::Context::default();
+        frame(&ctx, vec![]);
+        let (rect, _, _) = frame(&ctx, vec![]);
+        assert_eq!(rect.height(), 38.0);
+        for x in [rect.left() + 15.0, rect.right() - 15.0] {
+            let pos = egui::pos2(x, rect.center().y);
+            let (_, _, cursor) = frame(&ctx, vec![egui::Event::PointerMoved(pos)]);
+            assert_eq!(cursor, egui::CursorIcon::PointingHand);
+            frame(
+                &ctx,
+                vec![egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: Default::default(),
+                }],
+            );
+            let (_, clicked, _) = frame(
+                &ctx,
+                vec![egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: Default::default(),
+                }],
+            );
+            assert!(clicked);
+        }
+    }
+}
