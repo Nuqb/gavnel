@@ -69,7 +69,7 @@ impl Gavnel {
                     Color32::from_rgb(12, 12, 14),
                 );
                 if let Some(texture) = self.textures.get(&clip.path) {
-                    let size = texture.size_vec2();
+                    let size = texture.resolution_vec2();
                     let scale = (rect.width() / size.x).min(rect.height() / size.y);
                     let dest = Rect::from_center_size(rect.center(), size * scale);
                     ui.painter().image(
@@ -126,25 +126,25 @@ impl Gavnel {
                     ui.spacing_mut().button_padding.x += 4.0;
                     if ui
                         .button(if clip.is_screenshot() {
-                            "Open screenshot"
+                            tr("Open screenshot")
                         } else {
-                            "Play clip"
+                            tr("Play clip")
                         })
                         .clicked()
                     {
                         self.open_player(&clip.path);
                         ui.close();
                     }
-                    if ui.button("Show in folder").clicked() {
+                    if ui.button(tr("Show in folder")).clicked() {
                         let _ = platform::reveal(&clip.path);
                         ui.close();
                     }
                     if super::widgets::destructive_button(
                         ui,
                         if clip.is_screenshot() {
-                            "Delete screenshot"
+                            tr("Delete screenshot")
                         } else {
-                            "Delete clip"
+                            tr("Delete clip")
                         },
                         false,
                     )
@@ -161,16 +161,16 @@ impl Gavnel {
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             super::motion::vertical_menu_button(ui, |ui| {
                                 ui.spacing_mut().button_padding.x += 4.0;
-                                if ui.button("Show in folder").clicked() {
+                                if ui.button(tr("Show in folder")).clicked() {
                                     let _ = platform::reveal(&clip.path);
                                     ui.close();
                                 }
                                 if super::widgets::destructive_button(
                                     ui,
                                     if clip.is_screenshot() {
-                                        "Delete screenshot"
+                                        tr("Delete screenshot")
                                     } else {
-                                        "Delete clip"
+                                        tr("Delete clip")
                                     },
                                     false,
                                 )
@@ -182,7 +182,7 @@ impl Gavnel {
                                 }
                             })
                             .response
-                            .on_hover_text("Clip actions");
+                            .on_hover_text(tr("Clip actions"));
                             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                                 ui.add(
                                     egui::Label::new(
@@ -196,10 +196,12 @@ impl Gavnel {
                     ui.add_space(7.0);
                     let date: chrono::DateTime<chrono::Local> = clip.modified.into();
                     ui.label(
-                        RichText::new(format!(
-                            "On device  ·  {}  ·  {}",
-                            crate::storage::format_bytes(clip.bytes),
-                            date.format("%b %d")
+                        RichText::new(i18n::message(
+                            "On device · {size} · {date}",
+                            &[
+                                ("size", &crate::storage::format_bytes(clip.bytes)),
+                                ("date", &date.format("%Y-%m-%d").to_string()),
+                            ],
                         ))
                         .size(11.0)
                         .color(MUTED),

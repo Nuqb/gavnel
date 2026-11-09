@@ -7,7 +7,7 @@ impl Gavnel {
     pub(super) fn quick_overview(&mut self, ui: &mut egui::Ui, status: &Status) {
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new("RECORD WITH GAVNEL")
+                RichText::new(tr("RECORD WITH GAVNEL"))
                     .size(10.5)
                     .strong()
                     .color(MUTED),
@@ -18,7 +18,7 @@ impl Gavnel {
                     self.toggle_recording(status);
                 }
                 ui.label(
-                    RichText::new(if status.armed { "ON" } else { "OFF" })
+                    RichText::new(if status.armed { tr("ON") } else { tr("OFF") })
                         .size(10.0)
                         .color(MUTED),
                 );
@@ -37,33 +37,33 @@ impl Gavnel {
         }
         ui.add_space(10.0);
         let mode = match self.settings.recording_mode {
-            RecordingMode::Clips => "Manual capture",
-            RecordingMode::FullRecording => "Manual capture",
-            RecordingMode::AutomaticSessions => "Entire game sessions",
-            RecordingMode::Off => "Recording off",
+            RecordingMode::Clips => tr("Manual capture"),
+            RecordingMode::FullRecording => tr("Manual capture"),
+            RecordingMode::AutomaticSessions => tr("Entire game sessions"),
+            RecordingMode::Off => tr("Recording off"),
         };
-        if quick_row(ui, Glyph::Record, "Recording Mode", mode).clicked() {
+        if quick_row(ui, Glyph::Record, tr("Recording Mode"), mode).clicked() {
             self.page = Page::Settings;
             self.settings_page = SettingsPage::Recording;
             self.quick_open = false;
             ui.ctx()
-                .data_mut(|data| data.insert_temp(egui::Id::new("focus-recording-mode"), true));
+                .data_mut(|data| data.insert_temp(egui::Id::unique("focus-recording-mode"), true));
             ui.close();
         }
         ui.add_space(5.0);
         ui.separator();
         let mode = match self.settings.mode {
-            CaptureMode::Automatic => "Game",
-            CaptureMode::Monitor => "Monitor",
-            CaptureMode::Window => "Window",
+            CaptureMode::Automatic => tr("Game"),
+            CaptureMode::Monitor => tr("Monitor"),
+            CaptureMode::Window => tr("Window"),
         };
-        if quick_row(ui, Glyph::Game, "Video capture source", mode).clicked() {
+        if quick_row(ui, Glyph::Game, tr("Video capture source"), mode).clicked() {
             self.open_source_picker();
         }
         if quick_row(
             ui,
             Glyph::Settings,
-            "Quality",
+            tr("Quality"),
             &format!("{}p {} FPS", self.settings.height, self.settings.fps),
         )
         .clicked()
@@ -73,24 +73,24 @@ impl Gavnel {
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(Vec2::splat(22.0), Sense::hover());
             paint_icon(ui.painter(), r, Glyph::Mic, TEXT);
-            ui.label(RichText::new("Microphone").size(13.0));
+            ui.label(RichText::new(tr("Microphone")).size(13.0));
             let mut changed = false;
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let label = if !self.settings.microphone {
-                    "Off"
+                    tr("Off")
                 } else {
                     self.inputs
                         .iter()
                         .find(|d| d.id == self.settings.input_device)
                         .map(|d| d.label.as_str())
-                        .unwrap_or("Windows default")
+                        .unwrap_or(tr("Windows default"))
                 };
                 super::motion::ComboBox::from_id_salt("quick-mic")
                     .width(150.0)
                     .selected_text(label)
                     .show_ui(ui, |ui| {
                         if ui
-                            .selectable_label(!self.settings.microphone, "Off")
+                            .selectable_label(!self.settings.microphone, tr("Off"))
                             .clicked()
                         {
                             self.settings.microphone = false;
@@ -99,7 +99,7 @@ impl Gavnel {
                         if ui
                             .selectable_label(
                                 self.settings.microphone && self.settings.input_device.is_empty(),
-                                "Windows default",
+                                tr("Windows default"),
                             )
                             .clicked()
                         {
@@ -127,7 +127,14 @@ impl Gavnel {
                 self.message = e.to_string();
             }
         });
-        if quick_row(ui, Glyph::Volume, "Audio sources", "Automatic PC audio").clicked() {
+        if quick_row(
+            ui,
+            Glyph::Volume,
+            tr("Audio sources"),
+            tr("Automatic PC audio"),
+        )
+        .clicked()
+        {
             self.quick_page = QuickPage::Audio;
         }
         ui.add_space(4.0);
@@ -142,41 +149,41 @@ impl Gavnel {
             .chars()
             .take(15)
             .collect::<String>();
-        if quick_row(ui, Glyph::Folder, "Clip folder", &folder)
+        if quick_row(ui, Glyph::Folder, tr("Clip folder"), &folder)
             .on_hover_text(self.settings.clips_dir.display().to_string())
             .clicked()
         {
             self.browse_clip_folder();
         }
-        if quick_row(ui, Glyph::Settings, "Recorder settings", "").clicked() {
+        if quick_row(ui, Glyph::Settings, tr("Recorder settings"), "").clicked() {
             self.page = Page::Settings;
             self.settings_page = SettingsPage::Recording;
             ui.close();
         }
     }
     pub(super) fn quick_quality(&mut self, ui: &mut egui::Ui) {
-        self.quick_header(ui, "Recording quality");
+        self.quick_header(ui, tr("Recording quality"));
         let previous = (
             self.settings.height,
             self.settings.fps,
             self.settings.replay_seconds,
             self.settings.bitrate_mbps,
         );
-        ui.label(RichText::new("Resolution").size(12.0).color(MUTED));
+        ui.label(RichText::new(tr("Resolution")).size(12.0).color(MUTED));
         super::widgets::dropdown(
             ui,
             "quick-resolution",
             &mut self.settings.height,
             &[(720, "720p"), (1080, "1080p"), (1440, "1440p")],
         );
-        ui.label(RichText::new("Frame rate").size(12.0).color(MUTED));
+        ui.label(RichText::new(tr("Frame rate")).size(12.0).color(MUTED));
         super::widgets::dropdown(
             ui,
             "quick-fps",
             &mut self.settings.fps,
             &[(30, "30 FPS"), (60, "60 FPS"), (120, "120 FPS")],
         );
-        ui.label(RichText::new("Clip length").size(12.0).color(MUTED));
+        ui.label(RichText::new(tr("Clip length")).size(12.0).color(MUTED));
         ui.horizontal(|ui| {
             super::motion::ComboBox::from_id_salt("quick-duration")
                 .width(155.0)
@@ -191,7 +198,7 @@ impl Gavnel {
                     }
                 });
         });
-        ui.label(RichText::new("Bitrate").size(12.0).color(MUTED));
+        ui.label(RichText::new(tr("Bitrate")).size(12.0).color(MUTED));
         let bitrate = super::widgets::slider(ui, &mut self.settings.bitrate_mbps, 5..=50, "Mbps");
         let options_changed = previous.0 != self.settings.height
             || previous.1 != self.settings.fps
@@ -203,17 +210,17 @@ impl Gavnel {
         }
         ui.add_space(7.0);
         ui.label(
-            RichText::new("Quality changes save the current full recording and begin a new file, or reset the replay buffer.")
+            RichText::new(tr("Quality changes save the current full recording and begin a new file, or reset the replay buffer."))
                 .size(11.0)
                 .color(MUTED),
         );
     }
     pub(super) fn quick_audio(&mut self, ui: &mut egui::Ui) {
-        self.quick_header(ui, "Audio sources");
+        self.quick_header(ui, tr("Audio sources"));
         let mut changed = false;
-        ui.label(RichText::new("PC audio · Always recorded").strong());
+        ui.label(RichText::new(tr("PC audio · Always recorded")).strong());
         ui.label(
-            RichText::new("Game, Discord, and all active playback devices.")
+            RichText::new(tr("Game, Discord, and all active playback devices."))
                 .size(11.0)
                 .color(MUTED),
         );
@@ -223,7 +230,7 @@ impl Gavnel {
         ui.separator();
         ui.add_space(3.0);
         ui.horizontal(|ui| {
-            ui.label("Include microphone");
+            ui.label(tr("Include microphone"));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 changed |= toggle(ui, &mut self.settings.microphone).changed();
             });
@@ -243,7 +250,7 @@ impl Gavnel {
             self.message = e.to_string();
         }
         if ui
-            .add(egui::Button::new("Refresh audio devices").frame_when_inactive(false))
+            .add(egui::Button::new(tr("Refresh audio devices")).frame_when_inactive(false))
             .clicked()
         {
             self.inputs = audio::devices(true);
@@ -267,7 +274,7 @@ impl Gavnel {
             ));
             let response = response
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .on_hover_text("Back to recording settings");
+                .on_hover_text(tr("Back to recording settings"));
             if response.clicked() {
                 self.quick_page = QuickPage::Overview;
             }

@@ -1,0 +1,132 @@
+{
+  "excluded_titles": {
+    "Fuse": {
+      "reason": "Steam identifies app 257400 as Application; this is the 3D character creator, not the similarly named game",
+      "source": "https://store.steampowered.com/app/257400/Fuse/"
+    },
+    "GameGuru": {
+      "reason": "Game-creation software, classified by Steam as Application",
+      "source": "https://store.steampowered.com/app/266310/GameGuru_Classic/"
+    }
+  },
+  "excluded_executables": {
+    "supporttool.exe": {
+      "reason": "Launcher/support utility, not the Divinity game process",
+      "source": "https://larian.com/support/faqs/crash-on-startup-exception-code-0xc000007b_27"
+    },
+    "mlox.exe": {
+      "reason": "Morrowind mod load-order utility",
+      "source": "https://github.com/mlox/mlox"
+    },
+    "mgexegui.exe": {
+      "reason": "Morrowind graphics configuration utility",
+      "source": "https://github.com/Hrnchamd/MGE-XE"
+    },
+    "morrowind code patch.exe": {
+      "reason": "Patches Morrowind rather than running the game",
+      "source": "https://github.com/doublemoulinet/Morrowind-Modular-Mod-Guide/blob/master/SETUP.md"
+    },
+    "mhw_modmanager.exe": {
+      "reason": "Monster Hunter World mod manager",
+      "source": "https://github.com/UncleClapton/MHWModManager"
+    },
+    "naiom-gui.exe": {
+      "reason": "NieR Automata input-mod configuration GUI",
+      "source": "https://www.nexusmods.com/nierautomata/mods/12"
+    },
+    "sa2modmanager.exe": {
+      "reason": "Sonic Adventure 2 mod manager",
+      "source": "https://github.com/X-Hax/sa2-mod-loader"
+    },
+    "initial settings.exe": {
+      "reason": "Settings utility; not a gameplay executable",
+      "source": "Discord source record: Honey Select 2: Libido DX"
+    },
+    "mxsettings.exe": {
+      "reason": "Settings utility; not a gameplay executable",
+      "source": "Discord source record: MX vs. ATV: Reflex"
+    },
+    "settingsapplication.exe": {
+      "reason": "Settings utility; not a gameplay executable",
+      "source": "Discord source record: Rayman Raving Rabbids"
+    },
+    "bepinex.splashscreen.gui.exe": {
+      "reason": "BepInEx startup UI, not the game process",
+      "source": "https://github.com/BepInEx/BepInEx"
+    },
+    "downloader.exe": {
+      "reason": "Generic downloader; unsuitable for filename-only detection",
+      "source": "Filename safety review"
+    },
+    "unrealgame.exe": {
+      "reason": "Generic Unreal runtime; unsuitable for filename-only detection",
+      "source": "Filename safety review"
+    },
+    "run.exe": {
+      "reason": "Overly generic filename; cannot reliably distinguish this game from unrelated applications",
+      "source": "Filename-only matching limitation identified during catalog audit"
+    },
+    "boot.exe": {
+      "reason": "Overly generic filename; cannot reliably distinguish this game from unrelated applications",
+      "source": "Filename-only matching limitation identified during catalog audit"
+    },
+    "game64.exe": {
+      "reason": "Overly generic filename; cannot reliably distinguish this game from unrelated applications",
+      "source": "Filename-only matching limitation identified during catalog audit"
+    }
+  },
+  "steam_app_ids": {
+    "Iratus: Lord of the Dead": [
+      "807120"
+    ],
+    "The Last Job": [
+      "2185920"
+    ],
+    "MX vs. ATV: Reflex": [
+      "55140"
+    ],
+    "Ragnarok: The New World": [
+      "4212480"
+    ],
+    "Paradox Soul": [
+      "610570"
+    ],
+    "The Coin Game": [
+      "598980"
+    ]
+  },
+  "verified_aliases": [
+    {
+      "name": "The Last Job",
+      "executable": "thelastjob.exe",
+      "steam_app_id": "2185920",
+      "source": "https://api.steamcmd.net/v1/info/2185920"
+    },
+    {
+      "name": "MX vs. ATV: Reflex",
+      "executable": "mxreflex.exe",
+      "steam_app_id": "55140",
+      "source": "https://api.steamcmd.net/v1/info/55140"
+    },
+    {
+      "name": "Ragnarok: The New World",
+      "executable": "ragnarok the new world.exe",
+      "steam_app_id": "4212480",
+      "source": "https://api.steamcmd.net/v1/info/4212480"
+    }
+  ],
+  "identity_corrections": {
+    "Paradox Soul": {
+      "reason": "Discord store link pointed to The Lord of the Rings: Gollum",
+      "source": "https://store.steampowered.com/app/610570/"
+    },
+    "The Coin Game": {
+      "reason": "Discord store link pointed to Inner Voice",
+      "source": "https://store.steampowered.com/app/598980/"
+    },
+    "Iratus: Lord of the Dead": {
+      "reason": "Discord store link pointed only to the Supporter Pack DLC",
+      "source": "https://store.steampowered.com/app/807120/"
+    }
+  }
+}

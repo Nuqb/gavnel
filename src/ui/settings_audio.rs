@@ -3,22 +3,22 @@ use super::*;
 use egui::{Align, Layout, Pos2, Rect, Sense};
 impl Gavnel {
     pub(super) fn settings_audio(&mut self, ui: &mut egui::Ui) {
-        section(ui, "Recording Audio", |ui| {
+        section(ui, tr("Recording Audio"), |ui| {
             ui.separator();
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Audio Processes").strong());
+                ui.label(RichText::new(tr("Audio Processes")).strong());
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     super::motion::ComboBox::from_id_salt("audio-processes")
                         .selected_text(if self.settings.output_devices.is_none() {
-                            "All PC audio"
+                            tr("All PC audio")
                         } else {
-                            "Selected playback devices"
+                            tr("Selected playback devices")
                         })
                         .show_ui(ui, |ui| {
                             if ui
                                 .selectable_label(
                                     self.settings.output_devices.is_none(),
-                                    "All PC audio",
+                                    tr("All PC audio"),
                                 )
                                 .clicked()
                             {
@@ -27,7 +27,7 @@ impl Gavnel {
                             if ui
                                 .selectable_label(
                                     self.settings.output_devices.is_some(),
-                                    "Selected playback devices",
+                                    tr("Selected playback devices"),
                                 )
                                 .clicked()
                             {
@@ -46,7 +46,7 @@ impl Gavnel {
                 .show(ui, |ui| {
                     audio_volume_row(
                         ui,
-                        "Microphone",
+                        tr("Microphone"),
                         Glyph::Mic,
                         &mut self.settings.microphone,
                         &mut self.settings.mic_volume,
@@ -54,7 +54,7 @@ impl Gavnel {
                     ui.separator();
                     audio_volume_row(
                         ui,
-                        "PC Audio",
+                        tr("PC Audio"),
                         Glyph::Volume,
                         &mut self.settings.desktop_audio,
                         &mut self.settings.desktop_volume,
@@ -62,7 +62,7 @@ impl Gavnel {
                     ui.add_enabled_ui(self.settings.desktop_audio, |ui| {
                         ui.indent("output-devices", |ui| {
                             let mut all = self.settings.output_devices.is_none();
-                            if ui.checkbox(&mut all, "All playback devices").changed() {
+                            if ui.checkbox(&mut all, tr("All playback devices")).changed() {
                                 self.settings.output_devices = if all {
                                     None
                                 } else {
@@ -92,7 +92,7 @@ impl Gavnel {
             ui.separator();
             audio_toggle(
                 ui,
-                "Separate Audio Tracks",
+                tr("Separate Audio Tracks"),
                 &mut self.settings.separate_audio_tracks,
             );
         });
@@ -104,12 +104,12 @@ impl Gavnel {
         {
             self.mic_test = None;
             self.message =
-                "Microphone settings changed. Start a fresh Mic Test to hear them.".into();
+                tr("Microphone settings changed. Start a fresh Mic Test to hear them.").into();
         }
-        section(ui, "Microphone Settings", |ui| {
+        section(ui, tr("Microphone Settings"), |ui| {
             ui.separator();
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Microphone").strong());
+                ui.label(RichText::new(tr("Microphone")).strong());
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     device_selector(
                         ui,
@@ -121,35 +121,37 @@ impl Gavnel {
             });
             ui.separator();
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Mic Test").strong());
+                ui.label(RichText::new(tr("Mic Test")).strong());
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if let Some(test) = &self.mic_test {
                         match test.state() {
                             audio::MicTestState::Recording => {
-                                if ui.button("Playback").clicked() {
+                                if ui.button(tr("Playback")).clicked() {
                                     test.playback();
                                     ui.ctx().request_repaint_after(Duration::from_millis(30));
                                 }
-                                if ui.button("End Test").clicked() {
+                                if ui.button(tr("End Test")).clicked() {
                                     test.end();
                                 }
                             }
                             audio::MicTestState::Playing => {
-                                if ui.button("Stop Playback").clicked() {
+                                if ui.button(tr("Stop Playback")).clicked() {
                                     test.stop_playback();
                                 }
                             }
                             audio::MicTestState::Ready => {
-                                if ui.button("Start Test").clicked() {
+                                if ui.button(tr("Start Test")).clicked() {
                                     self.mic_test =
                                         Some(audio::MicTest::start(self.settings.clone()));
-                                } else if test.has_recording() && ui.button("Playback").clicked() {
+                                } else if test.has_recording()
+                                    && ui.button(tr("Playback")).clicked()
+                                {
                                     test.playback();
                                     ui.ctx().request_repaint_after(Duration::from_millis(30));
                                 }
                             }
                         }
-                    } else if ui.button("Start Test").clicked() {
+                    } else if ui.button(tr("Start Test")).clicked() {
                         self.mic_test = Some(audio::MicTest::start(self.settings.clone()));
                     }
                 });
@@ -189,17 +191,19 @@ impl Gavnel {
                 );
             }
             ui.label(
-                RichText::new("Mic level: -100 to 0 dB · White line: sensitivity threshold")
-                    .size(11.0)
-                    .color(MUTED),
+                RichText::new(tr(
+                    "Mic level: -100 to 0 dB · White line: sensitivity threshold",
+                ))
+                .size(11.0)
+                .color(MUTED),
             );
             ui.separator();
             audio_toggle(
                 ui,
-                "Input Sensitivity",
+                tr("Input Sensitivity"),
                 &mut self.settings.input_sensitivity_enabled,
             );
-            ui.label(RichText::new("Mutes the mic below your threshold. Lower values pick up quieter speech. Push to Talk bypasses this threshold.").size(12.0).color(MUTED));
+            ui.label(RichText::new(tr("Mutes the mic below your threshold. Lower values pick up quieter speech. Push to Talk bypasses this threshold.")).size(12.0).color(MUTED));
             ui.add_enabled_ui(
                 self.settings.input_sensitivity_enabled && !self.settings.push_to_talk,
                 |ui| {
@@ -212,10 +216,10 @@ impl Gavnel {
                 },
             );
             ui.separator();
-            ui.label(RichText::new("Noise Suppression").strong());
+            ui.label(RichText::new(tr("Noise Suppression")).strong());
             use crate::config::NoiseSuppression;
             super::motion::ComboBox::from_id_salt("mic-noise-suppression")
-                .selected_text(self.settings.noise_suppression_mode.label())
+                .selected_text(tr(self.settings.noise_suppression_mode.label()))
                 .show_ui(ui, |ui| {
                     for mode in [
                         NoiseSuppression::None,
@@ -225,25 +229,25 @@ impl Gavnel {
                         ui.selectable_value(
                             &mut self.settings.noise_suppression_mode,
                             mode,
-                            mode.label(),
+                            tr(mode.label()),
                         );
                     }
                 });
             ui.label(RichText::new(match self.settings.noise_suppression_mode {
-                            NoiseSuppression::None => "Keeps the original mic sound. Best for a quiet room or an already filtered mic.",
-                            NoiseSuppression::Standard => "Reduces steady fan noise and hiss. Use AI for typing and other changing background noise.",
-                            NoiseSuppression::Neural => "On-device AI filtering for background noise such as typing and fans. May change singing or music.",
+                            NoiseSuppression::None => tr("Keeps the original mic sound. Best for a quiet room or an already filtered mic."),
+                            NoiseSuppression::Standard => tr("Reduces steady fan noise and hiss. Use AI for typing and other changing background noise."),
+                            NoiseSuppression::Neural => tr("On-device AI filtering for background noise such as typing and fans. May change singing or music."),
                         }).size(12.0).color(MUTED));
-            ui.label(RichText::new("Changing microphone settings clears the old test. Start Test to hear the current settings.").size(12.0).color(MUTED));
+            ui.label(RichText::new(tr("Changing microphone settings clears the old test. Start Test to hear the current settings.")).size(12.0).color(MUTED));
             ui.separator();
-            audio_toggle(ui, "Push To Talk", &mut self.settings.push_to_talk);
+            audio_toggle(ui, tr("Push To Talk"), &mut self.settings.push_to_talk);
             ui.add_enabled_ui(self.settings.push_to_talk, |ui| {
                 let label = if self.capturing_ptt {
-                    "Press a key…".to_owned()
+                    tr("Press a key…").to_owned()
                 } else {
-                    format!(
-                        "Hotkey: {}",
-                        audio::ptt_key_name(self.settings.push_to_talk_key)
+                    i18n::message(
+                        "Hotkey: {key}",
+                        &[("key", &audio::ptt_key_name(self.settings.push_to_talk_key))],
                     )
                 };
                 if ui.button(label).clicked() {
@@ -271,7 +275,7 @@ impl Gavnel {
             mono_controls(ui, &mut self.settings);
         });
         ui.add_space(14.0);
-        if ui.button("Refresh audio devices").clicked() {
+        if ui.button(tr("Refresh audio devices")).clicked() {
             self.inputs = audio::devices(true);
             self.outputs = audio::devices(false);
         }

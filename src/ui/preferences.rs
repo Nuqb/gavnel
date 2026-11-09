@@ -1,6 +1,10 @@
 use super::*;
 impl Gavnel {
     pub(super) fn apply(&mut self) -> Result<()> {
+        self.apply_preferences(true)
+    }
+
+    pub(super) fn apply_preferences(&mut self, restart_capture: bool) -> Result<()> {
         let previous = self.active.lock().unwrap().clone();
         if self.settings.recording_mode.automatic() {
             self.settings.mode = CaptureMode::Automatic;
@@ -14,9 +18,14 @@ impl Gavnel {
             platform::startup(self.settings.start_with_windows)?;
         }
         self.settings.save()?;
+        if self.settings.language != previous.language {
+            self.refresh_tray_language();
+        }
         *self.active.lock().unwrap() = self.settings.clone();
-        self.engine
-            .send(Command::SetFeedback(self.settings.clip_feedback.clone()))?;
+        self.engine.send(Command::SetFeedback(
+            self.settings.clip_feedback.clone(),
+            self.settings.language,
+        ))?;
         self.engine.send(Command::SetReplayPreferences(
             self.settings.replay_seconds,
             self.settings.recording_hotkeys.clone(),
@@ -24,9 +33,10 @@ impl Gavnel {
         self.library.refresh(&self.settings.clips_dir);
         if self.settings.recording_mode == RecordingMode::Off {
             self.engine.send(Command::Stop)?;
-        } else if (self.engine.snapshot().armed && self.settings.recording_changed(&previous))
-            || (self.settings.recording_mode.automatic()
-                && self.settings.recording_mode != previous.recording_mode)
+        } else if restart_capture
+            && ((self.engine.snapshot().armed && self.settings.recording_changed(&previous))
+                || (self.settings.recording_mode.automatic()
+                    && self.settings.recording_mode != previous.recording_mode))
         {
             let mut runtime = self.settings.clone();
             if self.engine.snapshot().full_recording
@@ -58,7 +68,12 @@ impl Gavnel {
                 }
             }
             Ok(None) => {}
-            Err(e) => self.message = format!("Could not open the folder picker: {e:#}"),
+            Err(e) => {
+                self.message = i18n::message(
+                    "Could not open the folder picker: {error}",
+                    &[("error", &format!("{e:#}"))],
+                )
+            }
         }
     }
     pub(super) fn change_clip_folder(&mut self, path: PathBuf) -> Result<()> {
@@ -72,7 +87,7 @@ impl Gavnel {
         *self.active.lock().unwrap() = applied;
         self.textures.clear();
         self.library.refresh(&path);
-        self.message = "Clip folder changed. Your replay buffer is still running.".into();
+        self.message = tr("Clip folder changed. Your replay buffer is still running.").into();
         Ok(())
     }
 }

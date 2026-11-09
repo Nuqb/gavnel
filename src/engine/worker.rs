@@ -124,12 +124,13 @@ impl Worker {
                         .set_seconds(self.settings.replay_buffer_seconds());
                 }
             }
-            Command::SetFeedback(preferences) => {
+            Command::SetFeedback(preferences, language) => {
                 self.settings.clip_feedback = preferences.clone();
-                self.feedback(FeedbackEvent::Configure(preferences));
+                self.settings.language = language;
+                self.feedback(FeedbackEvent::Configure(preferences, language));
             }
-            Command::PreviewFeedback(preferences) => {
-                self.feedback(FeedbackEvent::Preview(preferences))
+            Command::PreviewFeedback(preferences, language) => {
+                self.feedback(FeedbackEvent::Preview(preferences, language))
             }
             Command::SetOutputFolder(folder) => {
                 self.settings.clips_dir = folder;
@@ -180,6 +181,7 @@ impl Worker {
         self.settings = settings;
         self.feedback(FeedbackEvent::Configure(
             self.settings.clip_feedback.clone(),
+            self.settings.language,
         ));
         if self.settings.recording_mode.automatic() {
             self.settings.mode = CaptureMode::Automatic;

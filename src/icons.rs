@@ -17,7 +17,7 @@ pub fn texture(
     svg: &[u8],
     size: u32,
 ) -> egui::TextureHandle {
-    let key = egui::Id::new(("gavnel-svg", name, size));
+    let key = egui::Id::unique(("gavnel-svg", name, size));
     if let Some(texture) = ctx.data_mut(|data| data.get_temp::<egui::TextureHandle>(key)) {
         return texture;
     }
@@ -65,8 +65,8 @@ mod tests {
         ];
         for svg in assets {
             let image = raster(svg, 48).unwrap();
-            assert_eq!(image.size, [48, 48]);
-            assert!(image.pixels.iter().any(|pixel| pixel.a() > 0));
+            assert_eq!(image.resolution(), [48, 48]);
+            assert!(image.pixels().iter().any(|pixel| pixel.a() > 0));
         }
     }
 }

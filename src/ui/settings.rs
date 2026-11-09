@@ -19,15 +19,15 @@ impl Gavnel {
     }
 
     fn settings_content(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new("Settings").size(27.0).strong());
+        ui.label(RichText::new(tr("Settings")).size(27.0).strong());
         ui.add_space(17.0);
         ui.horizontal(|ui| {
             for (page, label) in [
-                (SettingsPage::Recording, "Recording"),
-                (SettingsPage::Audio, "Audio"),
-                (SettingsPage::Storage, "Storage"),
-                (SettingsPage::General, "General"),
-                (SettingsPage::Games, "Game detection"),
+                (SettingsPage::Recording, tr("Recording")),
+                (SettingsPage::Audio, tr("Audio")),
+                (SettingsPage::Storage, tr("Storage")),
+                (SettingsPage::General, tr("General")),
+                (SettingsPage::Games, tr("Game detection")),
             ] {
                 if tab(ui, label, self.settings_page == page).clicked() {
                     self.settings_page = page;
@@ -36,13 +36,17 @@ impl Gavnel {
         });
         ui.separator();
         ui.add_space(14.0);
+        if self.settings_page == SettingsPage::Games && self.game_browser_open(ui) {
+            self.supported_game_browser(ui);
+            return;
+        }
         let mut scroll = egui::ScrollArea::vertical().id_salt("settings-scroll");
         let focus_hotkeys = ui.ctx().data_mut(|data| {
-            data.remove_temp::<bool>(egui::Id::new("focus-hotkeys"))
+            data.remove_temp::<bool>(egui::Id::unique("focus-hotkeys"))
                 .unwrap_or(false)
         });
         if ui.ctx().data_mut(|data| {
-            data.remove_temp::<bool>(egui::Id::new("focus-recording-mode"))
+            data.remove_temp::<bool>(egui::Id::unique("focus-recording-mode"))
                 .unwrap_or(false)
         }) || focus_hotkeys
         {
@@ -58,7 +62,7 @@ impl Gavnel {
             }
             ui.add_space(18.0);
             if !matches!(self.settings_page, SettingsPage::Audio | SettingsPage::Storage) { ui.label(
-                RichText::new("Source, quality, or audio changes save the current full recording and begin a new file. Replay clips start a fresh buffer.")
+                RichText::new(tr("Source, quality, or audio changes save the current full recording and begin a new file. Replay clips start a fresh buffer."))
                     .color(MUTED)
                     .size(12.0),
             ); }

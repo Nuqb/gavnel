@@ -2,6 +2,24 @@
 
 [← Back to the README](../README.md)
 
+## First-time setup
+
+Choose your language on the welcome screen. New profiles open a seven-step setup:
+capture source, quality, hotkeys and replay
+length, audio, capture folder, Windows startup, and the window close behavior.
+A final review lets you choose whether capture should start after setup.
+
+Choices stay in a draft until **Finish setup**. **Skip setup** keeps your language choice, discards the other draft changes,
+and opens the app with its current recording settings. Finishing or skipping is remembered;
+closing the app before either leaves setup unfinished for the next launch.
+Existing installations keep their preferences and are not forced through setup.
+
+To revisit it, open **Settings → General → Setup → Run setup again**.
+**Preview setup** opens an independent test window. It lets you move through the
+steps and try Finish or Skip without saving settings, changing Windows startup,
+or starting a recorder. The optional microphone test records only a temporary
+in-memory sample when you click its test button.
+
 ## Capture and recording modes
 
 Open the recorder dropdown in the top bar to choose a game, window, or display. Its source card shows a live preview while capture is active. The preview refreshes twice per second while the card is open.
@@ -12,7 +30,7 @@ Under **Settings → Recording**, choose:
 - **Automatically record entire game session:** detect a supported game, record while it is open, save when it closes, and wait for the next one.
 - **Recording off:** disable capture and recording shortcuts.
 
-The built-in profiles cover Fortnite, Valorant, Rust, and Counter-Strike 2. Add other executable names under **Settings → Game detection**. This is process detection, not automatic identification of kills, deaths, or other game events.
+The built-in profiles cover thousands of games, including Fortnite, Valorant, Rust, Counter-Strike 2, Roblox, Apex Legends, and Cyberpunk 2077. Add other executable names under **Settings → Game detection**. This is process detection, not automatic identification of kills, deaths, or other game events.
 
 The capture on/off state is saved on normal exit and restored at the next launch. A previous long recording finishes on exit; reopening starts a new capture using the saved mode, rather than continuing that file.
 
@@ -73,3 +91,11 @@ Settings are shared between app versions in `%APPDATA%\Gavnel\Gavnel\config`. Th
 - The retained compressed-packet budget is 512 MiB; total RAM and GPU memory can be higher.
 - Game/window capture becomes black when its target loses focus; audio continues. A monitor source captures everything visible on that display.
 - Source loss, device recovery, or a capture-backend change may reset the replay buffer. Automatic sessions wait or retry; manual long recordings stop and attempt to save received frames.
+
+## Language
+
+Change language anytime under **Settings → General → Language**. The searchable picker offers 86 language and regional
+choices, including Arabic, Hebrew, Chinese, Japanese, Korean, and Indian languages.
+Spanish, Portuguese, English, Chinese, and Serbian include explicit variants. The interface changes without restarting or interrupting an
+active recording. Your choice is remembered. See [language coverage and translation
+review status](localization.md).

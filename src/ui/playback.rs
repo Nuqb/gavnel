@@ -6,7 +6,10 @@ impl Gavnel {
             .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
         {
             if let Err(error) = platform::open(path) {
-                self.message = format!("Could not open screenshot: {error:#}");
+                self.message = i18n::message(
+                    "Could not open screenshot: {error}",
+                    &[("error", &format!("{error:#}"))],
+                );
             }
             return;
         }
@@ -21,13 +24,18 @@ impl Gavnel {
                 self.page = Page::Player;
                 self.quick_open = false;
             }
-            Err(e) => self.message = format!("Could not open the clip: {e:#}"),
+            Err(e) => {
+                self.message = i18n::message(
+                    "Could not open the clip: {error}",
+                    &[("error", &format!("{e:#}"))],
+                )
+            }
         }
     }
     pub(super) fn playback(&mut self, ui: &mut egui::Ui) {
         let mut back = false;
         if !self.quick_open
-            && !ui.ctx().wants_keyboard_input()
+            && !ui.ctx().egui_wants_keyboard_input()
             && let Some(player) = &self.player
         {
             let keys = ui.input_mut(|i| {
@@ -50,7 +58,7 @@ impl Gavnel {
             back = keys.3;
         }
         ui.horizontal(|ui| {
-            back |= ui.button("‹  Library").clicked();
+            back |= ui.button(tr("‹  Library")).clicked();
             if let Some(player) = &self.player {
                 ui.add(
                     egui::Label::new(
@@ -66,10 +74,10 @@ impl Gavnel {
                     .truncate(),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Show in folder").clicked() {
+                    if ui.button(tr("Show in folder")).clicked() {
                         let _ = platform::reveal(&player.path);
                     }
-                    if ui.button("Open externally").clicked() {
+                    if ui.button(tr("Open externally")).clicked() {
                         let _ = player.pause();
                         let _ = platform::open(&player.path);
                     }
@@ -98,7 +106,10 @@ impl Gavnel {
             ui.ctx().pixels_per_point(),
             !self.quick_open && error.is_none(),
         ) {
-            self.message = format!("Player display failed: {e}");
+            self.message = i18n::message(
+                "Player display failed: {error}",
+                &[("error", &e.to_string())],
+            );
         }
         if let Some(error) = error {
             ui.painter().text(
@@ -117,11 +128,11 @@ impl Gavnel {
             .min(duration);
         ui.horizontal(|ui| {
             let (glyph, label) = if player.ended() {
-                (views::Glyph::Refresh, "Replay")
+                (views::Glyph::Refresh, tr("Replay"))
             } else if player.paused() {
-                (views::Glyph::Play, "Play")
+                (views::Glyph::Play, tr("Play"))
             } else {
-                (views::Glyph::Pause, "Pause")
+                (views::Glyph::Pause, tr("Pause"))
             };
             if views::icon_button(ui, glyph, TEXT, label).clicked()
                 && let Err(e) = player.toggle()
@@ -162,7 +173,11 @@ impl Gavnel {
                     views::Glyph::Volume
                 },
                 TEXT,
-                if player.muted { "Unmute" } else { "Mute" },
+                if player.muted {
+                    tr("Unmute")
+                } else {
+                    tr("Mute")
+                },
             )
             .clicked()
             {
@@ -178,7 +193,7 @@ impl Gavnel {
                 .max_height(36.0)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Bookmarks").color(ACCENT));
+                        ui.label(RichText::new(tr("Bookmarks")).color(ACCENT));
                         for (index, seconds) in player.bookmarks.iter().enumerate() {
                             if ui
                                 .add_enabled(
@@ -189,7 +204,7 @@ impl Gavnel {
                                         time(*seconds)
                                     )),
                                 )
-                                .on_hover_text("Jump to this bookmarked moment")
+                                .on_hover_text(tr("Jump to this bookmarked moment"))
                                 .clicked()
                             {
                                 player.seek_preview = None;

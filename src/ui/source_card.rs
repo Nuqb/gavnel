@@ -9,7 +9,7 @@ pub(super) fn show(ui: &mut egui::Ui, status: &Status) -> egui::Response {
     ui.painter()
         .rect_filled(rect, 9.0, Color32::from_rgb(42, 42, 46));
     if let Some(image) = preview {
-        let key = egui::Id::new("recording-source-preview");
+        let key = egui::Id::unique("recording-source-preview");
         let mut cached = ui
             .ctx()
             .data_mut(|data| data.get_temp::<(Arc<egui::ColorImage>, egui::TextureHandle)>(key));
@@ -26,7 +26,7 @@ pub(super) fn show(ui: &mut egui::Ui, status: &Status) -> egui::Response {
         }
         let (_, texture) = cached.as_ref().unwrap();
         let area = Rect::from_min_size(rect.min, Vec2::new(332.0, 187.0));
-        let size = texture.size_vec2();
+        let size = texture.resolution_vec2();
         let scale = (area.width() / size.x).min(area.height() / size.y);
         let image_rect = Rect::from_center_size(area.center(), size * scale);
         ui.painter().image(
@@ -57,9 +57,9 @@ pub(super) fn show(ui: &mut egui::Ui, status: &Status) -> egui::Response {
         let title = if status.recording {
             status.source.chars().take(35).collect::<String>()
         } else if status.armed {
-            "Waiting for a game to be detected".into()
+            tr("Waiting for a game to be detected").into()
         } else {
-            "Ready for your next play".into()
+            tr("Ready for your next play").into()
         };
         ui.painter().text(
             egui::pos2(rect.center().x, rect.top() + 58.0),
@@ -72,9 +72,9 @@ pub(super) fn show(ui: &mut egui::Ui, status: &Status) -> egui::Response {
             egui::pos2(rect.center().x, rect.top() + 82.0),
             Align2::CENTER_CENTER,
             if status.recording {
-                "Preview unavailable · click to change source"
+                tr("Preview unavailable · click to change source")
             } else {
-                "Choose a game, monitor, or window"
+                tr("Choose a game, monitor, or window")
             },
             FontId::proportional(12.0),
             MUTED,

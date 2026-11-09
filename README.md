@@ -34,6 +34,7 @@ Gavnel is in active development. Its narrow scope is deliberate: make the local 
 
 ### Already in Gavnel
 
+- **A guided first start.** Choose capture, quality, hotkeys, audio, storage, and startup behavior. Skip it or revisit it later; a separate preview makes it easy to try.
 - **Replay clips and long recordings.** Save recent gameplay, start a recording yourself, or automatically record supported game sessions.
 - **A library that stays on your PC.** Thumbnails, game/source folders, search, sorting, and built-in video playback.
 - **Bookmarks and screenshots.** Mark moments in long recordings and save full-resolution PNGs.
@@ -48,15 +49,17 @@ Medal and Outplayed are useful for people who want sharing tools, editors, or au
 **All three can save recordings locally.** The difference is what comes with that recording experience.
 
 <p align="center">
-  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf." width="100%">
+  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf. Interface language options: Gavnel 86 including regional choices, with native-speaker review pending; Medal 22; Outplayed 1, English." width="100%">
 </p>
 
 <details>
 <summary><strong>Sources &amp; accessible text version</strong></summary>
 
-- **Gavnel:** local files; no ads, paid tier, cloud uploads, or account requirement; standalone native app.
-- **Medal:** [local files][medal-local]; [free-tier ads, Premium, and cloud options][medal-plans]; [account required][medal-account]; standalone app.
-- **Outplayed:** [local files][outplayed-local]; [free-tier ads, Premium, and optional hosting][outplayed-plans]; [Overwolf client required][outplayed-app]. [Account required to access Outplayed][outplayed-plans], though recording continues while logged out.
+- **Gavnel:** local files; no ads, paid tier, cloud uploads, or account requirement; standalone native app; **86 selectable language and regional options** ([localization notes](docs/localization.md)).
+- **Medal:** [local files][medal-local]; [free-tier ads, Premium, and cloud options][medal-plans]; [account required][medal-account]; standalone app; **22 language options** in its [official supported-language list][medal-languages].
+- **Outplayed:** [local files][outplayed-local]; [free-tier ads, Premium, and optional hosting][outplayed-plans]; [Overwolf client required][outplayed-app]. [Account required to access Outplayed][outplayed-plans], though recording continues while logged out. **English** is the sole text/interface language listed in its [publisher-provided Epic Games Store listing][outplayed-languages].
+
+**Language options** counts selectable interface locales, including regional and writing-system variants. Gavnel's 86 choices cover 81 base language codes; 14 additional draft catalogs are withheld. Selectable translations are initial AI-assisted work awaiting independent native-speaker review. Medal's 22-item list includes Simplified and Traditional Chinese separately. Outplayed's count reflects its published store listing. Counts describe available options rather than equivalent translation quality.
 
 Official product icons: [Medal support](https://support.medal.tv/) and [Outplayed](https://outplayed.tv/). Their marks belong to their respective owners and identify the products being compared.
 
@@ -66,7 +69,7 @@ Medal documents [slow interface/editor cases][medal-ui] and [choppy-recording tr
 
 Fast startup and low recording overhead are Gavnel's goals. **There is no side-by-side startup, FPS, or memory benchmark here.** Both alternatives also support hardware encoding. Actual results depend on the game, hardware, driver, recording settings, and storage.
 
-Gavnel currently has a narrower feature set: Windows with an NVIDIA GPU, a small built-in game-profile list, and no automatic kill/death highlight detection, cloud sync, or built-in montage editor.
+Gavnel currently has a narrower feature set: Windows with an NVIDIA GPU, a built-in game-detection catalog, and no automatic kill/death highlight detection, cloud sync, or built-in montage editor.
 
 </details>
 
@@ -129,3 +132,6 @@ Read the [user guide](docs/usage.md) for recording modes, audio, storage, and pl
 [overwolf-codecs]: https://support.overwolf.com/support/solutions/articles/9000177861-video-codec-selection-and-availability
 
 [medal-account]: https://support.medal.tv/support/solutions/articles/48001147502/
+
+[medal-languages]: https://support.medal.tv/support/solutions/articles/48001280799-community-programs-faq
+[outplayed-languages]: https://store.epicgames.com/p/outplayed/?lang=en-US

@@ -344,8 +344,16 @@ pub fn choose_clip_folder(initial: &Path) -> Result<Option<std::path::PathBuf>> 
         dialog.SetOptions(
             FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR,
         )?;
-        dialog.SetTitle(w!("Choose where Gavnel saves clips"))?;
-        dialog.SetOkButtonLabel(w!("Use this folder"))?;
+        let title: Vec<u16> = crate::i18n::tr("Choose where Gavnel saves clips")
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        let button: Vec<u16> = crate::i18n::tr("Use this folder")
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        dialog.SetTitle(PCWSTR(title.as_ptr()))?;
+        dialog.SetOkButtonLabel(PCWSTR(button.as_ptr()))?;
         if initial.is_dir() {
             let wide: Vec<u16> = initial
                 .as_os_str()
@@ -438,7 +446,8 @@ pub fn startup(enabled: bool) -> Result<()> {
         .ok()?;
         let result = if enabled {
             let exe = std::env::current_exe()?;
-            let command = format!("\"{}\" --background", exe.display());
+            let launcher = Path::new(env!("CARGO_MANIFEST_DIR")).join("scripts/launch.vbs");
+            let command = startup_command(&exe, &launcher);
             let data: Vec<u8> = command
                 .encode_utf16()
                 .chain(Some(0))
@@ -459,9 +468,40 @@ pub fn startup(enabled: bool) -> Result<()> {
     }
 }
 
+fn startup_command(exe: &Path, launcher: &Path) -> String {
+    if launcher.is_file() {
+        let windows = std::env::var_os("WINDIR")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("C:\\Windows"));
+        format!(
+            "\"{}\" //B //Nologo \"{}\" --background",
+            windows.join("System32/wscript.exe").display(),
+            launcher.display()
+        )
+    } else {
+        format!("\"{}\" --background", exe.display())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn windows_startup_uses_source_launcher_when_available_and_executable_when_packaged() {
+        let dir = tempfile::tempdir().unwrap();
+        let launcher = dir.path().join("launch.vbs");
+        let exe = dir.path().join("Gavnel.exe");
+        assert_eq!(
+            startup_command(&exe, &launcher),
+            format!("\"{}\" --background", exe.display())
+        );
+        std::fs::write(&launcher, b"test launcher").unwrap();
+        let command = startup_command(&exe, &launcher);
+        assert!(command.contains("wscript.exe"));
+        assert!(command.contains(&format!("\"{}\"", launcher.display())));
+        assert!(command.ends_with("--background"));
+        assert!(!command.contains("Gavnel.exe"));
+    }
     #[test]
     fn hidden_window_reopens_and_exit_cannot_be_reversed_by_late_tray_clicks() {
         use eframe::egui::{Context, ViewportCommand, ViewportId};
@@ -480,7 +520,8 @@ mod tests {
             quitting.clone(),
         );
         actions.show();
-        let output = ctx.run(Default::default(), |_| {});
+        let mut output = ctx.run_pass(Default::default(), |_| {});
+        output.textures_delta.clear();
         let commands = &output.viewport_output[&ViewportId::ROOT].commands;
         assert!(visible.load(Ordering::Acquire));
         assert!(commands.contains(&ViewportCommand::Visible(true)));
@@ -488,11 +529,13 @@ mod tests {
         assert!(commands.contains(&ViewportCommand::Focus));
         actions.hide();
         assert!(!visible.load(Ordering::Acquire));
-        let _ = ctx.run(Default::default(), |_| {});
+        ctx.run_pass(Default::default(), |_| {})
+            .drop_without_applying_deltas();
         actions.exit();
         actions.hide();
         actions.show();
-        let output = ctx.run(Default::default(), |_| {});
+        let mut output = ctx.run_pass(Default::default(), |_| {});
+        output.textures_delta.clear();
         let commands = &output.viewport_output[&ViewportId::ROOT].commands;
         assert!(quitting.load(Ordering::Acquire));
         assert!(visible.load(Ordering::Acquire));

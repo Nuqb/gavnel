@@ -1,34 +1,11 @@
 //! Shared desktop typography, colors, and widget spacing.
 use super::*;
 pub(super) fn apply(ctx: &egui::Context) {
-    ctx.on_end_pass("clickable-cursor", Arc::new(widgets::clickable_cursor));
-    let mut fonts = egui::FontDefinitions::default();
-    let font_root = std::env::var_os("WINDIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("C:\\Windows"))
-        .join("Fonts");
-    if let Ok(bytes) = std::fs::read(font_root.join("segoeui.ttf")) {
-        fonts
-            .font_data
-            .insert("Gavnel UI".into(), egui::FontData::from_owned(bytes).into());
-        fonts
-            .families
-            .get_mut(&egui::FontFamily::Proportional)
-            .unwrap()
-            .insert(0, "Gavnel UI".into());
-    }
-    let mut strong = fonts.families[&egui::FontFamily::Proportional].clone();
-    if let Ok(bytes) = std::fs::read(font_root.join("seguisb.ttf")) {
-        fonts.font_data.insert(
-            "Gavnel Semibold".into(),
-            egui::FontData::from_owned(bytes).into(),
-        );
-        strong.insert(0, "Gavnel Semibold".into());
-    }
-    fonts
-        .families
-        .insert(egui::FontFamily::Name("GavnelSemibold".into()), strong);
-    ctx.set_fonts(fonts);
+    ctx.on_end_pass(
+        "clickable-cursor",
+        Arc::new(|ui| widgets::clickable_cursor(ui.ctx())),
+    );
+    ctx.set_fonts(super::fonts::definitions());
     let mut visuals = egui::Visuals::dark();
     visuals.override_text_color = Some(TEXT);
     visuals.panel_fill = BG;
@@ -67,7 +44,7 @@ pub(super) fn apply(ctx: &egui::Context) {
     visuals.hyperlink_color = ACCENT;
     visuals.slider_trailing_fill = true;
     ctx.set_visuals(visuals);
-    ctx.style_mut(|s| {
+    ctx.style_mut_of(egui::Theme::Dark, |s| {
         s.spacing.item_spacing = Vec2::new(10.0, 10.0);
         s.spacing.button_padding = Vec2::new(14.0, 9.0);
         s.spacing.interact_size = Vec2::new(44.0, 36.0);

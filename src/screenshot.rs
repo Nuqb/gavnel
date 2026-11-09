@@ -168,10 +168,10 @@ mod tests {
                 rgba: [12, 34, 56, 255].repeat((width * height) as usize),
             };
             let preview = image.preview();
-            assert_eq!(preview.size, expected);
+            assert_eq!(preview.resolution(), expected);
             assert!(
                 preview
-                    .pixels
+                    .pixels()
                     .iter()
                     .all(|pixel| *pixel == eframe::egui::Color32::from_rgb(12, 34, 56))
             );

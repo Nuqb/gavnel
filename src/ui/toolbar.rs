@@ -7,7 +7,10 @@ impl Gavnel {
         let popup_id = ui.make_persistent_id("quick-settings-panel");
         ui.horizontal_centered(|ui| {
             let mut opened_from_toolbar = false;
-            let (rect, response) = ui.allocate_exact_size(Vec2::new(205.0, 38.0), Sense::click());
+            // Leave room for longer translated controls in the minimum-size window.
+            let status_width = (ui.available_width() - 800.0).clamp(140.0, 205.0);
+            let (rect, response) =
+                ui.allocate_exact_size(Vec2::new(status_width, 38.0), Sense::click());
             ui.painter().rect_filled(
                 rect,
                 8.0,
@@ -33,9 +36,9 @@ impl Gavnel {
                     status.source.chars().take(20).collect()
                 }
             } else if status.armed {
-                "Waiting for game".to_owned()
+                tr("Waiting for game").to_owned()
             } else {
-                "Recorder off".to_owned()
+                tr("Recorder off").to_owned()
             };
             let text_rect = Rect::from_min_max(
                 egui::pos2(rect.left() + 39.0, rect.top()),
@@ -44,7 +47,7 @@ impl Gavnel {
             ui.painter().with_clip_rect(text_rect).text(
                 text_rect.left_center(),
                 Align2::LEFT_CENTER,
-                label,
+                &label,
                 FontId::proportional(13.0),
                 TEXT,
             );
@@ -60,7 +63,7 @@ impl Gavnel {
             );
             let response = response
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .on_hover_text("Recording settings");
+                .on_hover_text(format!("{label}\n{}", tr("Recording settings")));
             if response.clicked() {
                 self.quick_page = QuickPage::Overview;
                 self.quick_open = !self.quick_open;
@@ -85,19 +88,19 @@ impl Gavnel {
                     egui::Button::new(format!(
                         "{}  ·  {}",
                         if self.settings.long_recording_hotkey.is_empty() {
-                            "Not set"
+                            tr("Not set")
                         } else {
                             &self.settings.long_recording_hotkey
                         },
                         if status.full_recording {
-                            "Stop & save"
+                            tr("Stop & save")
                         } else {
-                            "Long recording"
+                            tr("Long recording")
                         }
                     ))
                     .min_size(Vec2::new(165.0, 38.0)),
                 )
-                .on_hover_text("Start or stop a long recording")
+                .on_hover_text(tr("Start or stop a long recording"))
                 .clicked()
             {
                 self.toggle_long_recording();
@@ -108,9 +111,9 @@ impl Gavnel {
                         status.recording && status.buffered > 0.0,
                         egui::Button::new(
                             RichText::new(if status.full_recording {
-                                "Add bookmark"
+                                tr("Add bookmark")
                             } else {
-                                "Save clip"
+                                tr("Save clip")
                             })
                             .strong()
                             .color(Color32::from_rgb(28, 17, 9)),
@@ -141,7 +144,7 @@ impl Gavnel {
                     } else {
                         MUTED
                     },
-                    "Quick audio settings",
+                    tr("Quick audio settings"),
                 )
                 .clicked()
                 {
@@ -150,7 +153,7 @@ impl Gavnel {
                     self.quick_open = true;
                     opened_from_toolbar = true;
                 }
-                if icon_button(ui, Glyph::Folder, MUTED, "Choose clip folder").clicked() {
+                if icon_button(ui, Glyph::Folder, MUTED, tr("Choose clip folder")).clicked() {
                     self.browse_clip_folder();
                 }
             });

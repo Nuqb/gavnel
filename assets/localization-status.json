@@ -1,0 +1,1883 @@
+{
+  "schema": 1,
+  "catalogs": 100,
+  "selectable": 86,
+  "native_review": "No independent native-speaker review completed. Automated checks do not establish linguistic or cultural accuracy.",
+  "creation": "Initial 14 AI-authored catalogs; expansion uses offline MADLAD-400 3B drafts plus contextual edits, explicit state/action labels, and formatting repairs. Traditional Chinese uses OpenCC s2twp plus Taiwan terminology; Serbian Latin and Uzbek Latin use transliteration with review pending.",
+  "model": {
+    "upstream": "google/madlad400-3b-mt",
+    "license": "Apache-2.0",
+    "conversion": "cstr/madlad400-3b-ct2-int8",
+    "revision": "fd0b55729c074372eb84b52b9309a00dc65c40c4"
+  },
+  "runtime": "Bundled JSON only; no translation service or model runs in the app.",
+  "locales": [
+    {
+      "variant": "EnglishUs",
+      "code": "en-US",
+      "name": "English (United States)",
+      "english": "English (United States)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "EnglishGb",
+      "code": "en-GB",
+      "name": "English (United Kingdom)",
+      "english": "English (United Kingdom)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "SpanishSpain",
+      "code": "es-ES",
+      "name": "Español (España)",
+      "english": "Spanish (Spain)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "SpanishMexico",
+      "code": "es-MX",
+      "name": "Español (México)",
+      "english": "Spanish (Mexico)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "PortugueseBrazil",
+      "code": "pt-BR",
+      "name": "Português (Brasil)",
+      "english": "Portuguese (Brazil)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "PortuguesePortugal",
+      "code": "pt-PT",
+      "name": "Português (Portugal)",
+      "english": "Portuguese (Portugal)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "French",
+      "code": "fr-FR",
+      "name": "Français",
+      "english": "French",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "German",
+      "code": "de-DE",
+      "name": "Deutsch",
+      "english": "German",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Italian",
+      "code": "it-IT",
+      "name": "Italiano",
+      "english": "Italian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Dutch",
+      "code": "nl-NL",
+      "name": "Nederlands",
+      "english": "Dutch",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Polish",
+      "code": "pl-PL",
+      "name": "Polski",
+      "english": "Polish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Turkish",
+      "code": "tr-TR",
+      "name": "Türkçe",
+      "english": "Turkish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Ukrainian",
+      "code": "uk-UA",
+      "name": "Українська",
+      "english": "Ukrainian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Russian",
+      "code": "ru-RU",
+      "name": "Русский",
+      "english": "Russian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Afrikaans",
+      "code": "af-ZA",
+      "name": "Afrikaans",
+      "english": "Afrikaans",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Amharic",
+      "code": "am-ET",
+      "name": "አማርኛ",
+      "english": "Amharic",
+      "script": "ethiopic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Arabic",
+      "code": "ar",
+      "name": "العربية",
+      "english": "Arabic",
+      "script": "arabic",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Armenian",
+      "code": "hy-AM",
+      "name": "Հայերեն",
+      "english": "Armenian",
+      "script": "armenian",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Azerbaijani",
+      "code": "az-AZ",
+      "name": "Azərbaycanca",
+      "english": "Azerbaijani",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Belarusian",
+      "code": "be-BY",
+      "name": "Беларуская",
+      "english": "Belarusian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Bulgarian",
+      "code": "bg-BG",
+      "name": "Български",
+      "english": "Bulgarian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Bengali",
+      "code": "bn-BD",
+      "name": "বাংলা",
+      "english": "Bengali",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Bosnian",
+      "code": "bs-BA",
+      "name": "Bosanski",
+      "english": "Bosnian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Catalan",
+      "code": "ca-ES",
+      "name": "Català",
+      "english": "Catalan",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Czech",
+      "code": "cs-CZ",
+      "name": "Čeština",
+      "english": "Czech",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Welsh",
+      "code": "cy-GB",
+      "name": "Cymraeg",
+      "english": "Welsh",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Danish",
+      "code": "da-DK",
+      "name": "Dansk",
+      "english": "Danish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Greek",
+      "code": "el-GR",
+      "name": "Ελληνικά",
+      "english": "Greek",
+      "script": "greek",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Estonian",
+      "code": "et-EE",
+      "name": "Eesti",
+      "english": "Estonian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Persian",
+      "code": "fa-IR",
+      "name": "فارسی",
+      "english": "Persian",
+      "script": "arabic",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Finnish",
+      "code": "fi-FI",
+      "name": "Suomi",
+      "english": "Finnish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Filipino",
+      "code": "fil-PH",
+      "name": "Filipino",
+      "english": "Filipino",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Irish",
+      "code": "ga-IE",
+      "name": "Gaeilge",
+      "english": "Irish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Galician",
+      "code": "gl-ES",
+      "name": "Galego",
+      "english": "Galician",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Gujarati",
+      "code": "gu-IN",
+      "name": "ગુજરાતી",
+      "english": "Gujarati",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Hausa",
+      "code": "ha-NG",
+      "name": "Hausa",
+      "english": "Hausa",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Hebrew",
+      "code": "he-IL",
+      "name": "עברית",
+      "english": "Hebrew",
+      "script": "hebrew",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Hindi",
+      "code": "hi-IN",
+      "name": "हिन्दी",
+      "english": "Hindi",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Croatian",
+      "code": "hr-HR",
+      "name": "Hrvatski",
+      "english": "Croatian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "HaitianCreole",
+      "code": "ht-HT",
+      "name": "Kreyòl ayisyen",
+      "english": "Haitian Creole",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Hungarian",
+      "code": "hu-HU",
+      "name": "Magyar",
+      "english": "Hungarian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Indonesian",
+      "code": "id-ID",
+      "name": "Bahasa Indonesia",
+      "english": "Indonesian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Igbo",
+      "code": "ig-NG",
+      "name": "Igbo",
+      "english": "Igbo",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Icelandic",
+      "code": "is-IS",
+      "name": "Íslenska",
+      "english": "Icelandic",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Japanese",
+      "code": "ja-JP",
+      "name": "日本語",
+      "english": "Japanese",
+      "script": "cjk",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Georgian",
+      "code": "ka-GE",
+      "name": "ქართული",
+      "english": "Georgian",
+      "script": "georgian",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Kazakh",
+      "code": "kk-KZ",
+      "name": "Қазақша",
+      "english": "Kazakh",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Khmer",
+      "code": "km-KH",
+      "name": "ខ្មែរ",
+      "english": "Khmer",
+      "script": "khmer",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Kannada",
+      "code": "kn-IN",
+      "name": "ಕನ್ನಡ",
+      "english": "Kannada",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Korean",
+      "code": "ko-KR",
+      "name": "한국어",
+      "english": "Korean",
+      "script": "cjk",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Luxembourgish",
+      "code": "lb-LU",
+      "name": "Lëtzebuergesch",
+      "english": "Luxembourgish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Luganda",
+      "code": "lg-UG",
+      "name": "Luganda",
+      "english": "Luganda",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Lingala",
+      "code": "ln-CD",
+      "name": "Lingála",
+      "english": "Lingala",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Lao",
+      "code": "lo-LA",
+      "name": "ລາວ",
+      "english": "Lao",
+      "script": "lao",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Lithuanian",
+      "code": "lt-LT",
+      "name": "Lietuvių",
+      "english": "Lithuanian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Latvian",
+      "code": "lv-LV",
+      "name": "Latviešu",
+      "english": "Latvian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Malagasy",
+      "code": "mg-MG",
+      "name": "Malagasy",
+      "english": "Malagasy",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Macedonian",
+      "code": "mk-MK",
+      "name": "Македонски",
+      "english": "Macedonian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Malayalam",
+      "code": "ml-IN",
+      "name": "മലയാളം",
+      "english": "Malayalam",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Mongolian",
+      "code": "mn-MN",
+      "name": "Монгол",
+      "english": "Mongolian",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Marathi",
+      "code": "mr-IN",
+      "name": "मराठी",
+      "english": "Marathi",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Malay",
+      "code": "ms-MY",
+      "name": "Bahasa Melayu",
+      "english": "Malay",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Burmese",
+      "code": "my-MM",
+      "name": "မြန်မာ",
+      "english": "Burmese",
+      "script": "myanmar",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Nepali",
+      "code": "ne-NP",
+      "name": "नेपाली",
+      "english": "Nepali",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "NorwegianBokmal",
+      "code": "nb-NO",
+      "name": "Norsk bokmål",
+      "english": "Norwegian Bokmål",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "NorthernSotho",
+      "code": "nso-ZA",
+      "name": "Sesotho sa Leboa",
+      "english": "Northern Sotho",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Odia",
+      "code": "or-IN",
+      "name": "ଓଡ଼ିଆ",
+      "english": "Odia",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "PunjabiGurmukhi",
+      "code": "pa-IN",
+      "name": "ਪੰਜਾਬੀ",
+      "english": "Punjabi (Gurmukhi)",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Pashto",
+      "code": "ps-AF",
+      "name": "پښتو",
+      "english": "Pashto",
+      "script": "arabic",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Romanian",
+      "code": "ro-RO",
+      "name": "Română",
+      "english": "Romanian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Sindhi",
+      "code": "sd-PK",
+      "name": "سنڌي",
+      "english": "Sindhi",
+      "script": "arabic",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Sinhala",
+      "code": "si-LK",
+      "name": "සිංහල",
+      "english": "Sinhala",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Slovak",
+      "code": "sk-SK",
+      "name": "Slovenčina",
+      "english": "Slovak",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Slovenian",
+      "code": "sl-SI",
+      "name": "Slovenščina",
+      "english": "Slovenian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Somali",
+      "code": "so-SO",
+      "name": "Soomaali",
+      "english": "Somali",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Albanian",
+      "code": "sq-AL",
+      "name": "Shqip",
+      "english": "Albanian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "SerbianCyrillic",
+      "code": "sr-Cyrl-RS",
+      "name": "Српски (ћирилица)",
+      "english": "Serbian (Cyrillic)",
+      "script": "cyrillic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Swedish",
+      "code": "sv-SE",
+      "name": "Svenska",
+      "english": "Swedish",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Swahili",
+      "code": "sw-KE",
+      "name": "Kiswahili",
+      "english": "Swahili",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Tamil",
+      "code": "ta-IN",
+      "name": "தமிழ்",
+      "english": "Tamil",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Thai",
+      "code": "th-TH",
+      "name": "ไทย",
+      "english": "Thai",
+      "script": "thai",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Tswana",
+      "code": "tn-BW",
+      "name": "Setswana",
+      "english": "Tswana",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Urdu",
+      "code": "ur-PK",
+      "name": "اردو",
+      "english": "Urdu",
+      "script": "arabic",
+      "rtl": true,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Uzbek",
+      "code": "uz-UZ",
+      "name": "Oʻzbekcha",
+      "english": "Uzbek",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Vietnamese",
+      "code": "vi-VN",
+      "name": "Tiếng Việt",
+      "english": "Vietnamese",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Wolof",
+      "code": "wo-SN",
+      "name": "Wolof",
+      "english": "Wolof",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Xhosa",
+      "code": "xh-ZA",
+      "name": "isiXhosa",
+      "english": "Xhosa",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Yoruba",
+      "code": "yo-NG",
+      "name": "Yorùbá",
+      "english": "Yoruba",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "ChineseSimplified",
+      "code": "zh-CN",
+      "name": "简体中文",
+      "english": "Chinese (Simplified)",
+      "script": "cjk",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Zulu",
+      "code": "zu-ZA",
+      "name": "isiZulu",
+      "english": "Zulu",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Telugu",
+      "code": "te-IN",
+      "name": "తెలుగు",
+      "english": "Telugu",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Assamese",
+      "code": "as-IN",
+      "name": "অসমীয়া",
+      "english": "Assamese",
+      "script": "indic",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Maltese",
+      "code": "mt-MT",
+      "name": "Malti",
+      "english": "Maltese",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "NorwegianNynorsk",
+      "code": "nn-NO",
+      "name": "Norsk nynorsk",
+      "english": "Norwegian Nynorsk",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "Maori",
+      "code": "mi-NZ",
+      "name": "Māori",
+      "english": "Māori",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Fijian",
+      "code": "fj-FJ",
+      "name": "Vosa Vakaviti",
+      "english": "Fijian",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Samoan",
+      "code": "sm-WS",
+      "name": "Gagana Samoa",
+      "english": "Samoan",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "Tongan",
+      "code": "to-TO",
+      "name": "Lea faka-Tonga",
+      "english": "Tongan",
+      "script": "latin",
+      "rtl": false,
+      "selectable": false,
+      "native_review": "pending",
+      "status": "initial draft; needs linguistic correction before selection"
+    },
+    {
+      "variant": "ChineseTraditional",
+      "code": "zh-TW",
+      "name": "繁體中文（台灣）",
+      "english": "Chinese (Traditional, Taiwan)",
+      "script": "cjk",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    },
+    {
+      "variant": "SerbianLatin",
+      "code": "sr-Latn-RS",
+      "name": "Srpski (latinica)",
+      "english": "Serbian (Latin)",
+      "script": "latin",
+      "rtl": false,
+      "selectable": true,
+      "native_review": "pending",
+      "status": "initial translation; native-speaker review pending"
+    }
+  ],
+  "formatting_repairs_needing_review": [
+    {
+      "locale": "af-ZA",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Choose a complete folder path, such as F:\\Clips.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Choose where Gavnel saves clips",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Clip {duration}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Could not open the clip: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Exit Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Gavnel cannot save to this folder. Choose a writable location.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Open Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Player display failed: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "When I close Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "Windows could not open this file or folder.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "am-ET",
+      "key": "{size} replay memory",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ar",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "Could not open the clip: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hy-AM",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Could not open the clip: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Exit Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Open Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "az-AZ",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "be-BY",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "be-BY",
+      "key": "Game, Discord, and all active playback devices.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "be-BY",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "be-BY",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "be-BY",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "bn-BD",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "bn-BD",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "bs-BA",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "cy-GB",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "cy-GB",
+      "key": "Windows could not open this file or folder.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "cy-GB",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "fa-IR",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "fa-IR",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "gu-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "Clip {duration}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "Exit Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "Open on Windows startup",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "Start Gavnel in the tray with Windows",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "saves your last {seconds} s",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "{buffered} / {seconds} s buffered",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ha-NG",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "he-IL",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "he-IL",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hi-IN",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "hi-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ig-NG",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ig-NG",
+      "key": "Open Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ig-NG",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ja-JP",
+      "key": "Gavnel · Click to open · Right-click to exit",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ja-JP",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ka-GE",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ka-GE",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ka-GE",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ka-GE",
+      "key": "Windows could not open this file or folder.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ka-GE",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "kk-KZ",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "kk-KZ",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "kk-KZ",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "kn-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "kn-IN",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ko-KR",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "Choose a valid shortcut for {action}.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "Game, Discord, and all active playback devices.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lb-LU",
+      "key": "{size} replay memory",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Choose a complete folder path, such as F:\\Clips.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Could not open the clip: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Open Gavnel",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lg-UG",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lo-LA",
+      "key": "Drive {name}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "lo-LA",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mg-MG",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mg-MG",
+      "key": "Gavnel records when a supported game opens and saves when it closes. Clip hotkeys still work.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mg-MG",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mk-MK",
+      "key": "Clip {duration}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mk-MK",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ml-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mn-MN",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mn-MN",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mn-MN",
+      "key": "Player display failed: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mn-MN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mr-IN",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mr-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mr-IN",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ne-NP",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "nb-NO",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "or-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "or-IN",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "pa-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "pa-IN",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ps-AF",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ps-AF",
+      "key": "Windows could not open this file or folder.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sd-PK",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sd-PK",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sd-PK",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "so-SO",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sq-AL",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sr-Cyrl-RS",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sr-Cyrl-RS",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sr-Cyrl-RS",
+      "key": "Screen {number}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sr-Cyrl-RS",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sr-Cyrl-RS",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sw-KE",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sw-KE",
+      "key": "Game, Discord, and all active playback devices.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sw-KE",
+      "key": "Includes everything visible on this monitor after Alt-Tab.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "sw-KE",
+      "key": "Welcome to Gavnel.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ta-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "th-TH",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ur-PK",
+      "key": "Hotkey: {key}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ur-PK",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "ur-PK",
+      "key": "{free} of {total} available",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "uz-UZ",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "vi-VN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "xh-ZA",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "xh-ZA",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "xh-ZA",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "xh-ZA",
+      "key": "{size} replay memory",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "yo-NG",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "yo-NG",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "yo-NG",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "On device · {size} · {date}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "zu-ZA",
+      "key": "Could not open screenshot: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "zu-ZA",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "te-IN",
+      "key": "Delivered: {delivered} FPS · Fresh source: {fresh} FPS · Dropped: {dropped} · Captures saved: {saved}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "te-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "as-IN",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "mi-NZ",
+      "key": "{action} shortcut is already in use. Choose another. {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "fj-FJ",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "to-TO",
+      "key": "Choose a complete folder path, such as F:\\Clips.",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "to-TO",
+      "key": "Could not open the clip: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    },
+    {
+      "locale": "to-TO",
+      "key": "Could not open the folder picker: {error}",
+      "status": "protected-slot chunk repair; native review needed"
+    }
+  ]
+}

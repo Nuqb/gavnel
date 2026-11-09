@@ -3,7 +3,7 @@ use super::*;
 use egui::Align;
 impl Gavnel {
     pub(super) fn settings_recording(&mut self, ui: &mut egui::Ui, focus_hotkeys: bool) {
-        section(ui, "Recording Mode", |ui| {
+        section(ui, tr("Recording Mode"), |ui| {
             self.recording_mode_controls(ui, &self.engine.snapshot());
         });
         ui.add_space(14.0);
@@ -12,8 +12,8 @@ impl Gavnel {
         }
         self.recording_hotkeys(ui);
         ui.add_space(14.0);
-        section(ui, "Recording quality", |ui| {
-            ui.label(RichText::new("Recording resolution").strong());
+        section(ui, tr("Recording quality"), |ui| {
+            ui.label(RichText::new(tr("Recording resolution")).strong());
             super::widgets::dropdown(
                 ui,
                 "recording-resolution",
@@ -21,7 +21,7 @@ impl Gavnel {
                 &[(720, "720p"), (1080, "1080p"), (1440, "1440p")],
             );
             ui.add_space(12.0);
-            ui.label(RichText::new("Frame rate").strong());
+            ui.label(RichText::new(tr("Frame rate")).strong());
             super::widgets::dropdown(
                 ui,
                 "recording-fps",
@@ -29,7 +29,7 @@ impl Gavnel {
                 &[(30, "30 FPS"), (60, "60 FPS"), (120, "120 FPS")],
             );
             ui.add_space(12.0);
-            ui.label(RichText::new("Video bitrate").strong());
+            ui.label(RichText::new(tr("Video bitrate")).strong());
             super::widgets::slider(ui, &mut self.settings.bitrate_mbps, 5..=50, "Mbps");
         });
         ui.add_space(14.0);

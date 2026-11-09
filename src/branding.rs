@@ -82,7 +82,7 @@ pub fn paint(painter: &egui::Painter, rect: Rect, phase: Option<f32>) {
 pub fn icon_rgba(size: usize) -> Vec<u8> {
     crate::icons::raster(ICON, size as u32)
         .expect("Bundled app icon must render")
-        .pixels
+        .pixels()
         .iter()
         .flat_map(|p| p.to_srgba_unmultiplied())
         .collect()

@@ -56,7 +56,7 @@ fn state_id(id: Id) -> Id {
     id.with("gavnel-dropdown-motion")
 }
 fn registry_id() -> Id {
-    Id::new("gavnel-animated-popups")
+    Id::unique("gavnel-animated-popups")
 }
 
 fn reveal(rect: Rect, anchor: Rect, amount: f32) -> Rect {
@@ -132,7 +132,7 @@ pub(super) fn popup(ctx: &egui::Context, id: Id, anchor: Rect, open: bool, rende
             // Replace egui's built-in opening fade with our reversible curve;
             // otherwise reopening during collapse would flash back to transparent.
             if let Some(visible_at) = area.last_became_visible_at {
-                let duration = ctx.style().animation_time as f64;
+                let duration = ctx.style_of(egui::Theme::Dark).animation_time as f64;
                 let age = now - visible_at + ctx.input(|i| i.predicted_dt) as f64 / 2.0;
                 let native = if duration > 0.0 {
                     egui::emath::easing::quadratic_out((age / duration).clamp(0.0, 1.0) as f32)
@@ -230,22 +230,22 @@ pub(super) fn chevron(ui: &egui::Ui, id: Id, rect: Rect, open: bool, color: Colo
 }
 
 /// Builder compatible with the subset used by Gavnel; all selectors share motion.
-pub(super) struct ComboBox {
-    inner: egui::ComboBox,
-    salt: Id,
+pub(super) struct ComboBox<'a> {
+    inner: egui::ComboBox<'a>,
+    salt: egui::IdSalt,
 }
-impl ComboBox {
-    pub fn from_id_salt(salt: impl std::hash::Hash) -> Self {
+impl<'a> ComboBox<'a> {
+    pub fn from_id_salt(salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
         Self {
             inner: egui::ComboBox::from_id_salt(&salt),
-            salt: Id::new(&salt),
+            salt: egui::IdSalt::new(&salt),
         }
     }
     pub fn width(mut self, width: f32) -> Self {
         self.inner = self.inner.width(width);
         self
     }
-    pub fn selected_text(mut self, text: impl Into<egui::WidgetText>) -> Self {
+    pub fn selected_text(mut self, text: impl egui::IntoAtoms<'a>) -> Self {
         self.inner = self.inner.selected_text(text);
         self
     }
@@ -293,8 +293,7 @@ pub(super) fn vertical_menu_button<R>(
         ui.painter()
             .circle_filled(rect.center() + Vec2::new(0.0, offset), 1.6, color);
     }
-    response
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Clip actions"));
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, "Clip actions"));
     let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     let inner = egui::Popup::menu(&response)
         .show(|ui| {

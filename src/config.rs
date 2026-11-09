@@ -70,22 +70,16 @@ pub struct GameProfile {
     pub executable: String,
 }
 
-const OFFICIAL_GAMES: [(&str, &str); 4] = [
-    ("Fortnite", "FortniteClient-Win64-Shipping.exe"),
-    ("Valorant", "VALORANT-Win64-Shipping.exe"),
-    ("Rust", "RustClient.exe"),
-    ("Counter-Strike 2", "cs2.exe"),
-];
+mod game_catalog;
+use game_catalog::OFFICIAL_GAMES;
 
 impl GameProfile {
     pub fn is_official(&self) -> bool {
-        OFFICIAL_GAMES
-            .iter()
-            .any(|(_, executable)| self.executable.eq_ignore_ascii_case(executable))
+        game_catalog::official_name(&self.executable).is_some()
     }
 
     fn official_games() -> impl Iterator<Item = Self> {
-        OFFICIAL_GAMES.into_iter().map(|(name, executable)| Self {
+        OFFICIAL_GAMES.iter().map(|&(name, executable)| Self {
             name: name.into(),
             executable: executable.into(),
         })
@@ -129,6 +123,8 @@ impl NoiseSuppression {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    pub onboarding_completed: bool,
+    pub language: crate::i18n::Language,
     /// None preserves startup behavior for preferences saved before this field existed.
     pub capture_enabled: Option<bool>,
     pub library_compact: bool,
@@ -179,6 +175,8 @@ impl Default for Settings {
             .and_then(|u| u.video_dir().map(|p| p.to_owned()))
             .unwrap_or_else(|| PathBuf::from("."));
         Self {
+            onboarding_completed: false,
+            language: crate::i18n::Language::default(),
             capture_enabled: None,
             library_compact: false,
             library_group_by_game: false,
@@ -274,7 +272,10 @@ impl Settings {
     fn restore_official_games(&mut self) {
         let custom = std::mem::take(&mut self.profiles)
             .into_iter()
-            .filter(|profile| !profile.is_official());
+            .filter(|profile| {
+                !profile.is_official()
+                    && !game_catalog::retired_builtin(&profile.name, &profile.executable)
+            });
         self.profiles = GameProfile::official_games().chain(custom).collect();
     }
 
@@ -361,6 +362,13 @@ impl Settings {
         if path.exists() {
             merge_preferences(&mut value, serde_json::from_slice(&std::fs::read(path)?)?);
         }
+        // Older installations have already been configured; only genuinely new
+        // profiles enter setup automatically. An explicit false survives exit.
+        if value.get("onboarding_completed").is_none()
+            && value.as_object().is_some_and(|fields| !fields.is_empty())
+        {
+            value["onboarding_completed"] = serde_json::json!(true);
+        }
         let missing_long = value.get("long_recording_hotkey").is_none();
         let missing_bookmark = value.get("bookmark_hotkey").is_none();
         let mut settings: Self = serde_json::from_value(value)
@@ -416,6 +424,7 @@ impl Settings {
                 // Recover compatible fields individually instead of resetting every preference
                 // when a newer version introduces one unfamiliar value.
                 let mut values = serde_json::to_value(Self::default()).unwrap();
+                values["onboarding_completed"] = serde_json::json!(true);
                 let mut has_long_shortcut = false;
                 let mut has_bookmark_shortcut = false;
                 for source in [
@@ -508,6 +517,29 @@ fn stored_folder(settings_path: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn setup_is_first_run_only_and_completion_or_skip_survives_restart() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        assert!(!Settings::load_from(&path).unwrap().onboarding_completed);
+        std::fs::write(&path, r#"{"height":720}"#).unwrap();
+        assert!(Settings::load_from(&path).unwrap().onboarding_completed);
+        for completed in [false, true] {
+            let settings = Settings {
+                onboarding_completed: completed,
+                ..Settings::default()
+            };
+            settings.save_to(&path).unwrap();
+            assert_eq!(
+                Settings::load_from(&path).unwrap().onboarding_completed,
+                completed
+            );
+            assert_eq!(
+                Settings::recover_from(&path).0.onboarding_completed,
+                completed
+            );
+        }
+    }
     #[test]
     fn game_profiles_validate_before_mutating_preferences() {
         let mut settings = Settings::default();
@@ -641,11 +673,16 @@ mod tests {
         )
         .unwrap();
         let loaded = Settings::load_from(&path).unwrap();
-        assert_eq!(loaded.profiles.len(), 5);
-        assert!(loaded.profiles[..4].iter().all(GameProfile::is_official));
+        let count = OFFICIAL_GAMES.len();
+        assert_eq!(loaded.profiles.len(), count + 1);
+        assert!(
+            loaded.profiles[..count]
+                .iter()
+                .all(GameProfile::is_official)
+        );
         assert_eq!(loaded.profiles[3].name, "Counter-Strike 2");
-        assert_eq!(loaded.profiles[4].executable, "custom.exe");
-        assert!(!loaded.profiles[4].is_official());
+        assert_eq!(loaded.profiles[count].executable, "custom.exe");
+        assert!(!loaded.profiles[count].is_official());
         loaded.save_to(&path).unwrap();
         assert_eq!(
             Settings::load_from(&path).unwrap().profiles,
@@ -654,7 +691,7 @@ mod tests {
 
         std::fs::write(&path, r#"{"version":99,"profiles":[]}"#).unwrap();
         let (recovered, _) = Settings::recover_from(&path);
-        assert_eq!(recovered.profiles.len(), 4);
+        assert_eq!(recovered.profiles.len(), count);
         assert!(recovered.profiles.iter().all(GameProfile::is_official));
     }
 

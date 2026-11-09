@@ -15,7 +15,7 @@ pub(super) fn show(
     details: Option<&crate::library::Clip>,
     error: Option<&str>,
 ) -> Action {
-    let id = egui::Id::new("delete-recording-confirmation");
+    let id = egui::Id::unique("delete-recording-confirmation");
     let screenshot = path
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("png"));
@@ -50,9 +50,9 @@ pub(super) fn show(
                 ui.add_space(5.0);
                 ui.label(
                     RichText::new(if screenshot {
-                        "Delete this screenshot?"
+                        tr("Delete this screenshot?")
                     } else {
-                        "Delete this clip?"
+                        tr("Delete this clip?")
                     })
                     .size(22.0)
                     .strong(),
@@ -64,7 +64,7 @@ pub(super) fn show(
                             egui::Button::new(RichText::new("×").size(23.0).color(MUTED))
                                 .frame_when_inactive(false),
                         )
-                        .on_hover_text("Cancel")
+                        .on_hover_text(tr("Cancel"))
                         .clicked()
                     {
                         action = Action::Cancel;
@@ -74,8 +74,10 @@ pub(super) fn show(
             ui.add_space(16.0);
             ui.add(
                 egui::Label::new(
-                    RichText::new("This capture will be permanently deleted from your computer.")
-                        .color(MUTED),
+                    RichText::new(tr(
+                        "This capture will be permanently deleted from your computer.",
+                    ))
+                    .color(MUTED),
                 )
                 .wrap(),
             );
@@ -87,9 +89,13 @@ pub(super) fn show(
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.label(
-                        RichText::new(details.map(|c| c.source.as_str()).unwrap_or("Recording"))
-                            .size(11.0)
-                            .color(MUTED),
+                        RichText::new(
+                            details
+                                .map(|c| c.source.as_str())
+                                .unwrap_or(tr("Recording")),
+                        )
+                        .size(11.0)
+                        .color(MUTED),
                     );
                     ui.add(
                         egui::Label::new(
@@ -123,9 +129,9 @@ pub(super) fn show(
                     if widgets::destructive_button(
                         ui,
                         if screenshot {
-                            "Delete screenshot"
+                            tr("Delete screenshot")
                         } else {
-                            "Delete clip"
+                            tr("Delete clip")
                         },
                         true,
                     )
@@ -135,7 +141,9 @@ pub(super) fn show(
                     }
                     let cancel = ui.add_sized(
                         [104.0, 40.0],
-                        egui::Button::new("Cancel").fill(CARD).corner_radius(7.0),
+                        egui::Button::new(tr("Cancel"))
+                            .fill(CARD)
+                            .corner_radius(7.0),
                     );
                     if cancel.clicked() {
                         action = Action::Cancel;

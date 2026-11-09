@@ -35,7 +35,7 @@ const STYLE: WINDOW_EX_STYLE = WINDOW_EX_STYLE(
 );
 
 pub enum Event {
-    Configure(ClipFeedback),
+    Configure(ClipFeedback, crate::i18n::Language),
     Bookmarked {
         source: String,
         seconds: f64,
@@ -50,7 +50,7 @@ pub enum Event {
         success: bool,
     },
     Failed(String),
-    Preview(ClipFeedback),
+    Preview(ClipFeedback, crate::i18n::Language),
 }
 
 #[derive(Clone)]
@@ -73,6 +73,7 @@ impl Feedback {
                     presentation: Presentation::default(),
                     sound: Vec::new(),
                     scale: 1.0,
+                    language: crate::i18n::Language::default(),
                 }));
                 let window = unsafe { create_window((&mut *state) as *mut RefCell<State> as _) };
                 match window {
@@ -143,7 +144,11 @@ impl Presentation {
         self.current = Some(Toast {
             id,
             title: title.into(),
-            body: format!("{source} · {:.0} seconds", seconds),
+            body: format!(
+                "{source} · {}:{:02}",
+                seconds.round() as u64 / 60,
+                seconds.round() as u64 % 60
+            ),
             born: now,
         });
     }
@@ -184,12 +189,14 @@ struct State {
     presentation: Presentation,
     sound: Vec<u8>,
     scale: f32,
+    language: crate::i18n::Language,
 }
 impl State {
     unsafe fn events(&mut self, hwnd: HWND) {
         while let Ok(event) = self.rx.try_recv() {
             match event {
-                Event::Configure(preferences) => {
+                Event::Configure(preferences, language) => {
+                    self.language = language;
                     if !preferences.notification {
                         unsafe {
                             self.hide(hwnd);
@@ -273,7 +280,8 @@ impl State {
                         }
                     }
                 }
-                Event::Preview(preferences) => {
+                Event::Preview(preferences, language) => {
+                    self.language = language;
                     self.presentation.current = Some(Toast {
                         id: 0,
                         title: "Clip saved".into(),
@@ -438,7 +446,7 @@ unsafe extern "system" fn window_proc(
                     if let Ok(state) = cell.try_borrow()
                         && let Some(toast) = &state.presentation.current
                     {
-                        draw(dc, state.scale, toast);
+                        draw(dc, state.scale, toast, state.language);
                     }
                     let _ = EndPaint(hwnd, &paint);
                     return LRESULT(0);
@@ -485,6 +493,7 @@ mod tests {
                     body: "Fortnite · 60 seconds".into(),
                     born: Instant::now(),
                 },
+                crate::i18n::Language::EnglishUs,
             );
             let _ = GdiFlush();
             let bytes =

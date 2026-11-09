@@ -6,4 +6,7 @@ Set files = CreateObject("Scripting.FileSystemObject")
 launcher = files.BuildPath(files.GetParentFolderName(WScript.ScriptFullName), "launch.ps1")
 powershell = shell.ExpandEnvironmentStrings("%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe")
 command = """" & powershell & """ -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & launcher & """"
+If WScript.Arguments.Count > 0 Then
+    If WScript.Arguments(0) = "--background" Then command = command & " -Background"
+End If
 shell.Run command, 0, False
