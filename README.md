@@ -47,18 +47,18 @@ Medal and Outplayed are useful for people who want sharing tools, editors, or au
 
 **All three can save recordings locally.** The difference is what comes with that recording experience.
 
-| What matters | Gavnel — current app & direction | Medal | Outplayed |
-| :--- | :--- | :--- | :--- |
-| Core focus | Local capture, playback, and files you control | Recording with sharing, profiles, and cloud options [↗][medal-plans] | Game capture, event highlights, editing, and sharing [↗][outplayed-guide] |
-| Local recordings | MP4 / PNG in your chosen folder | Saves local clips [↗][medal-local] | Saves local recordings [↗][outplayed-local] |
-| Ads | None | Free tier includes ads; Premium removes them [↗][medal-plans] | Includes ads; Premium removes them [↗][outplayed-plans] |
-| Paid tiers | No paid tier; MIT-licensed source | Free and Premium tiers [↗][medal-plans] | Free Core and paid Premium plans [↗][outplayed-plans] |
-| Cloud & sharing | No upload service; share your files yourself | Optional uploads and Medal Cloud features [↗][medal-plans] | Optional Outplayed.tv hosting and sharing [↗][outplayed-plans] |
-| Extra platform | Native Windows app; no recording account | Account features for profiles, sharing, and cloud [↗][medal-plans] | Runs on the Overwolf client; app access requires login, though recording continues while logged out [↗][outplayed-app] [↗][outplayed-plans] |
-| Performance approach | Native UI, NVENC, bounded replay data, background exports | GPU or CPU encoding options [↗][medal-performance] | Hardware or CPU encoding options [↗][overwolf-codecs] |
+<p align="center">
+  <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads." width="100%">
+</p>
 
 <details>
-<summary><strong>Sources, performance context, and comparison scope</strong></summary>
+<summary><strong>Sources &amp; accessible text version</strong></summary>
+
+- **Gavnel:** local files; no ads, paid tier, or cloud uploads; standalone native app.
+- **Medal:** [local files][medal-local]; [free-tier ads, Premium, and cloud options][medal-plans].
+- **Outplayed:** [local files][outplayed-local]; [free-tier ads, Premium, and optional hosting][outplayed-plans]; [Overwolf client required][outplayed-app]. Login is required to access Outplayed, though recording continues while logged out.
+
+Official product icons: [Medal support](https://support.medal.tv/) and [Outplayed](https://outplayed.tv/). Their marks belong to their respective owners and identify the products being compared.
 
 Comparison checked **November 9, 2026**, using the vendors' official documentation. Plans and features can change. Gavnel's column describes this repository's implementation and stated direction, rather than a promise of future features.
 
