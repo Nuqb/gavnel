@@ -8,7 +8,7 @@ Gavnel releases target Windows 11 x64. The per-user installer writes to `%LOCALA
 2. Run formatting, tests, strict Clippy, and the locale checker. Verify setup and update UI. Test capture on an NVIDIA machine before claiming recording performance.
 3. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1 -ExpectedVersion VERSION`. It builds with the static MSVC runtime, collects notices from locked dependencies, verifies the executable version, and compiles the installer. Output is under `work/releases/vVERSION/`. It refuses to overwrite an existing payload unless `-Resume` is explicitly used to resume a failed unpublished build.
 4. Test installation into a disposable folder with `/VERYSILENT /NORESTART /NOSHORTCUTS=1 /NOLAUNCH=1 /NOREGISTRY=1 /DIR="FULL_PATH"`; test uninstalling without deleting user data. Never test against a running recorder or existing source shortcut.
-5. Commit the reviewed source, push the version tag `vVERSION`, and let the Release workflow create a **draft** release with the installer and SHA256SUMS.txt. Review its assets, checksums, notes, and CI before publishing the draft. Drafts are never offered to the updater.
+5. Commit the reviewed source, push the version tag `vVERSION`, and let the Release workflow test installation, updating, and uninstalling before creating a **draft** release with the installer and SHA256SUMS.txt. Review its assets, checksums, notes, and CI before publishing the draft. Drafts are never offered to the updater.
 
 The initial public release requires a public GitHub repository. Making a private repository public exposes its source and Git history, so this is a separate owner decision.
 

@@ -49,6 +49,13 @@ jobs:
       - name: Build installer and notices
         shell: pwsh
         run: ./scripts/package-release.ps1 -ExpectedVersion $env:RELEASE_TAG.Substring(1)
+      - name: Verify installer update and uninstall
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          $env:GAVNEL_TEST_INSTALLER = Join-Path $env:GITHUB_WORKSPACE "work/releases/$env:RELEASE_TAG/Gavnel-Setup-$version-x64.exe"
+          cargo test --locked installer_replaces_a_closed_process_and_preserves_user_data -- --ignored --nocapture
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Create draft release
         shell: pwsh
         env:

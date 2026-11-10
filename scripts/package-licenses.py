@@ -1,5 +1,6 @@
 """Build a license inventory from the locked Windows dependency graph."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -35,7 +36,12 @@ def license_files(package):
     if not result:
         bundled = Path("packaging/licenses") / f'{package["name"]}-{package["version"]}'
         if bundled.is_dir():
-            result.update(p for p in bundled.iterdir() if p.is_file())
+            manifest = json.loads(Path("packaging/licenses/provenance.json").read_text(encoding="utf-8"))
+            for entry in manifest[bundled.name]:
+                source = bundled / entry["file"]
+                if hashlib.sha256(source.read_bytes()).hexdigest() != entry["sha256"]:
+                    raise ValueError(f"Pinned license checksum mismatch: {source}")
+                result.add(source)
     return sorted(result)
 
 
