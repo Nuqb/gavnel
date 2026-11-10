@@ -132,18 +132,6 @@ impl Gavnel {
         self.settings = candidate;
         Ok(())
     }
-    pub(super) fn toggle_long_recording(&mut self) {
-        if self.settings.recording_mode == RecordingMode::Off {
-            self.message = tr("Choose a recording mode to enable long recording.").into();
-            return;
-        }
-        match self.apply() {
-            Ok(()) => self.send(Command::ToggleLongRecording(Box::new(
-                self.settings.clone(),
-            ))),
-            Err(error) => self.message = error.to_string(),
-        }
-    }
     pub(super) fn bind_shortcuts(&mut self) -> Result<()> {
         let new = parse_bindings(&self.settings)?;
         let mut current = self.hotkey.lock().unwrap();

@@ -77,86 +77,71 @@ impl Gavnel {
                 self.settings.replay_seconds,
                 self.clips_open,
             );
-            let clips_clicked = clips.clicked();
+            let long_recording = super::clips_menu::shortcut_button(
+                ui,
+                &self.settings.long_recording_hotkey,
+                tr("Long recording"),
+                self.clips_open,
+            );
+            let clips_clicked = clips.clicked() || long_recording.clicked();
             if clips_clicked {
                 self.clips_open = !self.clips_open;
                 self.quick_open = false;
             }
-            if ui
-                .add_enabled(
-                    self.settings.recording_mode != RecordingMode::Off,
-                    egui::Button::new(format!(
-                        "{}  ·  {}",
-                        if self.settings.long_recording_hotkey.is_empty() {
-                            tr("Not set").to_owned()
-                        } else {
-                            crate::key_labels::display(&self.settings.long_recording_hotkey)
-                        },
-                        if status.full_recording {
-                            tr("Stop & save")
-                        } else {
-                            tr("Long recording")
-                        }
-                    ))
-                    .min_size(Vec2::new(165.0, 38.0)),
-                )
-                .on_hover_text(tr("Start or stop a long recording"))
-                .clicked()
-            {
-                self.toggle_long_recording();
-            }
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui
-                    .add_enabled(
-                        status.recording && status.buffered > 0.0,
-                        egui::Button::new(
-                            RichText::new(if status.full_recording {
-                                tr("Add bookmark")
-                            } else {
-                                tr("Save clip")
-                            })
-                            .strong()
-                            .color(Color32::from_rgb(28, 17, 9)),
-                        )
-                        .fill(ACCENT)
-                        .corner_radius(6.0)
-                        .min_size(Vec2::new(92.0, 36.0)),
-                    )
-                    .clicked()
-                {
-                    self.send(Command::Save);
-                }
-                if ui
-                    .add(
-                        egui::Button::new(self.recording_button(status))
+            if self.page != Page::Clips {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui
+                        .add_enabled(
+                            status.recording && status.buffered > 0.0,
+                            egui::Button::new(
+                                RichText::new(if status.full_recording {
+                                    tr("Add bookmark")
+                                } else {
+                                    tr("Save clip")
+                                })
+                                .strong()
+                                .color(Color32::from_rgb(28, 17, 9)),
+                            )
+                            .fill(ACCENT)
                             .corner_radius(6.0)
-                            .min_size(Vec2::new(95.0, 36.0)),
+                            .min_size(Vec2::new(92.0, 36.0)),
+                        )
+                        .clicked()
+                    {
+                        self.send(Command::Save);
+                    }
+                    if ui
+                        .add(
+                            egui::Button::new(self.recording_button(status))
+                                .corner_radius(6.0)
+                                .min_size(Vec2::new(95.0, 36.0)),
+                        )
+                        .clicked()
+                    {
+                        self.toggle_recording(status);
+                    }
+                    if icon_button(
+                        ui,
+                        Glyph::Mic,
+                        if self.settings.microphone {
+                            ACCENT
+                        } else {
+                            MUTED
+                        },
+                        tr("Quick audio settings"),
                     )
                     .clicked()
-                {
-                    self.toggle_recording(status);
-                }
-                if icon_button(
-                    ui,
-                    Glyph::Mic,
-                    if self.settings.microphone {
-                        ACCENT
-                    } else {
-                        MUTED
-                    },
-                    tr("Quick audio settings"),
-                )
-                .clicked()
-                {
-                    self.clips_open = false;
-                    self.quick_page = QuickPage::Audio;
-                    self.quick_open = true;
-                    opened_from_toolbar = true;
-                }
-                if icon_button(ui, Glyph::Folder, MUTED, tr("Choose clip folder")).clicked() {
-                    self.browse_clip_folder();
-                }
-            });
+                    {
+                        self.clips_open = false;
+                        self.quick_page = QuickPage::Audio;
+                        self.quick_open = true;
+                        opened_from_toolbar = true;
+                    }
+                    if icon_button(ui, Glyph::Folder, MUTED, tr("Choose clip folder")).clicked() {
+                        self.browse_clip_folder();
+                    }
+                });
+            }
             let mut open = self.quick_open;
             super::widgets::quick_panel(
                 ui,
@@ -171,7 +156,8 @@ impl Gavnel {
                 },
             );
             self.quick_open = open && self.quick_open && self.source_picker.is_none();
-            self.clips_menu(ui, &clips, clips_clicked);
+            let anchor = clips.union(long_recording);
+            self.clips_menu(ui, &anchor, clips_clicked);
         });
     }
 }

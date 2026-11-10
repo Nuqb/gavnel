@@ -15,24 +15,46 @@ pub(super) fn clip_button(
     seconds: u32,
     open: bool,
 ) -> egui::Response {
+    shortcut_button(
+        ui,
+        hotkey,
+        &i18n::message("Clip {duration}", &[("duration", &duration_label(seconds))]),
+        open,
+    )
+    .on_hover_text(tr("Clip hotkey and duration"))
+}
+
+pub(super) fn shortcut_button(
+    ui: &mut egui::Ui,
+    hotkey: &str,
+    caption: &str,
+    open: bool,
+) -> egui::Response {
     let hotkey = if hotkey.is_empty() {
         tr("Not set")
     } else {
         hotkey
     };
-    let key = ui.painter().layout_no_wrap(
-        crate::key_labels::display(hotkey),
-        FontId::monospace(12.0),
-        TEXT,
-    );
-    let caption = ui.painter().layout_no_wrap(
-        i18n::message("Clip {duration}", &[("duration", &duration_label(seconds))]),
-        FontId::proportional(13.0),
-        TEXT,
-    );
-    let key_width = (key.size().x + 12.0).max(32.0);
+    let keys: Vec<_> = hotkey
+        .split('+')
+        .map(|part| {
+            ui.painter().layout_no_wrap(
+                crate::key_labels::display(part.trim()),
+                FontId::monospace(12.0),
+                TEXT,
+            )
+        })
+        .collect();
+    let keys_width: f32 = keys
+        .iter()
+        .map(|key| (key.size().x + 12.0).max(32.0))
+        .sum::<f32>()
+        + 4.0 * keys.len().saturating_sub(1) as f32;
+    let caption = ui
+        .painter()
+        .layout_no_wrap(caption.to_owned(), FontId::proportional(13.0), TEXT);
     let (rect, response) = ui.allocate_exact_size(
-        Vec2::new(key_width + caption.size().x + 25.0, 38.0),
+        Vec2::new(keys_width + caption.size().x + 25.0, 38.0),
         Sense::click(),
     );
     ui.painter().rect_filled(
@@ -44,25 +66,28 @@ pub(super) fn clip_button(
             CARD
         },
     );
-    let key_rect = Rect::from_center_size(
-        egui::pos2(rect.left() + 4.0 + key_width / 2.0, rect.center().y),
-        Vec2::new(key_width, 32.0),
-    );
-    ui.painter()
-        .rect_filled(key_rect, 6.0, Color32::from_rgb(55, 55, 61));
-    ui.painter()
-        .galley(key_rect.center() - key.size() / 2.0, key, TEXT);
+    let mut left = rect.left() + 4.0;
+    for key in keys {
+        let width = (key.size().x + 12.0).max(32.0);
+        let key_rect = Rect::from_center_size(
+            egui::pos2(left + width / 2.0, rect.center().y),
+            Vec2::new(width, 32.0),
+        );
+        ui.painter()
+            .rect_filled(key_rect, 6.0, Color32::from_rgb(55, 55, 61));
+        ui.painter()
+            .galley(key_rect.center() - key.size() / 2.0, key, TEXT);
+        left += width + 4.0;
+    }
     ui.painter().galley(
         egui::pos2(
-            key_rect.right() + 9.0,
+            rect.left() + 4.0 + keys_width + 9.0,
             rect.center().y - caption.size().y / 2.0,
         ),
         caption,
         TEXT,
     );
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text(tr("Clip hotkey and duration"))
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 pub(super) fn manage_hotkeys_button(ui: &mut egui::Ui) -> egui::Response {
     ui.add(
