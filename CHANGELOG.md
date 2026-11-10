@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Long recording in the top toolbar opens the clip popup instead of starting a recording.
+- Shortcut modifiers and keys appear in separate boxes without plus signs or a bullet separator.
+- Removed the folder, microphone, capture, and save clip actions from the Library toolbar.
+
 ## 0.3.1
 
 - Shared onboarding-style checkboxes and radio buttons, refined recording options, and more compact settings panels.

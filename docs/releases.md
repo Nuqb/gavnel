@@ -2,6 +2,15 @@
 
 Gavnel releases target Windows 11 x64. The per-user installer writes to `%LOCALAPPDATA%\Programs\Gavnel` by default and includes the dependency inventory, license notices, and an uninstaller. Settings and recordings are stored separately and survive updates and uninstalling.
 
+## Meaning of "push an update"
+
+A request to "push an update" or "push update" includes publishing a new stable
+GitHub release, unless the user explicitly asks for a source-only push. Complete
+the process below through reviewing and publishing the workflow's draft. Pushing
+source or creating a draft alone is not completion. Use a new patch version for
+small fixes; never overwrite assets on an existing published release. Report any
+blocked checks or publishing steps honestly.
+
 ## Prepare a release
 
 1. Update the Cargo package version, regenerate Cargo.lock, update CHANGELOG.md, and add `docs/releases/vVERSION.md` with user-facing release notes.
