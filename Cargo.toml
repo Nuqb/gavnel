@@ -14,7 +14,7 @@ crossbeam-channel = "0.5"
 directories = "6"
 eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow"] }
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
-global-hotkey = "0.7"
+global-hotkey = "0.9"
 mini-nvcodec = "0.1.0"
 mp4 = "0.14"
 serde = { version = "1", features = ["derive"] }
