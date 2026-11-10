@@ -70,7 +70,7 @@ through **Run setup again**; there is no need to delete configuration files.
 
 First-run detection and completion, draft isolation, shortcut conflicts and replay
 length, navigation, and the minimum window size have automated regression checks.
-To export all seven screens with generated test devices and no app window:
+To export all six screens with generated test devices and no app window:
 
 ```powershell
 cargo test --locked export_onboarding_previews -- --ignored
@@ -78,6 +78,17 @@ cargo test --locked export_onboarding_previews -- --ignored
 
 The images are written under `work/onboarding/`. The preview command is also
 available directly as `gavnel.exe --onboarding-preview`.
+
+The quality step lists example GPU/CPU/RAM/SSD pairings as conservative
+starting points for gaming and recording together. They are advisory estimates,
+not benchmarked Gavnel minimums or a guarantee for every game. Lower-spec PCs may
+work; game load, capture resolution, driver support, and GPU headroom matter.
+The NVIDIA GPU examples support H.264 NVENC; NVIDIA documents the encoder's
+capabilities and indicative performance in its [NVENC application note](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-application-note/index.html).
+CPU and RAM pairings are product guidance, not requirements from NVIDIA. Each
+preset offers Intel and AMD CPU examples with the same NVIDIA GPU. AMD Radeon
+and Intel GPU encoding are not implemented and must not be listed as compatible
+onboarding hardware.
 
 ### Recorder diagnostics
 

@@ -2,72 +2,108 @@ use super::*;
 
 impl Wizard {
     pub(super) fn audio_page(&mut self, ui: &mut egui::Ui, devices: &Devices<'_>) {
-        ui.checkbox(&mut self.draft.desktop_audio, tr("PC audio"));
-        ui.add_space(20.0);
-        ui.separator();
-        ui.add_space(20.0);
-        ui.checkbox(&mut self.draft.microphone, tr("Microphone"));
-        ui.add_space(12.0);
-        ui.add_enabled_ui(self.draft.microphone, |ui| {
-            super::super::views::device_selector(
-                ui,
-                "setup-microphone",
-                &mut self.draft.input_device,
-                devices.inputs,
-            );
+        controls::group(ui, tr("PC audio"), |ui| {
+            self.output_selector(ui, devices.outputs);
         });
-        ui.add_space(12.0);
-        if self
-            .mic_test
-            .as_ref()
-            .is_some_and(|test| !test.matches_settings(&self.draft))
-            || !self.draft.microphone
-        {
-            self.mic_test = None;
-        }
-        self.microphone_test(ui);
+        ui.add_space(8.0);
+        controls::group(ui, tr("Microphone"), |ui| {
+            self.input_selector(ui, devices.inputs);
+            ui.add_space(8.0);
+            if !self.draft.microphone
+                || self
+                    .mic_test
+                    .as_ref()
+                    .is_some_and(|test| !test.matches_settings(&self.draft))
+            {
+                self.mic_test = None;
+            }
+            ui.add_enabled_ui(self.draft.microphone, |ui| {
+                super::super::microphone_test::show(ui, &self.draft, &mut self.mic_test);
+            });
+        });
     }
 
-    fn microphone_test(&mut self, ui: &mut egui::Ui) {
-        ui.add_enabled_ui(self.draft.microphone, |ui| {
-            ui.horizontal(|ui| {
-                if ui.button(tr("Test microphone")).clicked() {
-                    self.mic_test = Some(audio::MicTest::start(self.draft.clone()));
+    fn output_selector(&mut self, ui: &mut egui::Ui, devices: &[AudioDevice]) {
+        let label = if !self.draft.desktop_audio {
+            tr("Off")
+        } else {
+            match &self.draft.output_devices {
+                None => tr("All PC audio"),
+                Some(ids) if ids.len() == 1 => devices
+                    .iter()
+                    .find(|d| d.id == ids[0])
+                    .map_or(tr("Selected device is disconnected"), |d| d.label.as_str()),
+                Some(_) => tr("Selected playback devices"),
+            }
+        };
+        super::super::motion::ComboBox::from_id_salt("setup-output")
+            .width(ui.available_width())
+            .selected_text(label)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.draft.desktop_audio, false, tr("Off"));
+                if ui
+                    .selectable_label(
+                        self.draft.desktop_audio && self.draft.output_devices.is_none(),
+                        tr("All PC audio"),
+                    )
+                    .clicked()
+                {
+                    self.draft.desktop_audio = true;
+                    self.draft.output_devices = None;
                 }
-                if let Some(test) = &self.mic_test {
-                    match test.state() {
-                        audio::MicTestState::Recording => {
-                            if ui.button(tr("Listen back")).clicked() {
-                                test.playback();
-                            }
-                        }
-                        audio::MicTestState::Playing => {
-                            if ui.button(tr("Stop playback")).clicked() {
-                                test.stop_playback();
-                            }
-                        }
-                        audio::MicTestState::Ready => {
-                            if test.has_recording() && ui.button(tr("Listen again")).clicked() {
-                                test.playback();
-                            }
-                        }
+                for device in devices {
+                    let selected = self.draft.desktop_audio
+                        && self
+                            .draft
+                            .output_devices
+                            .as_ref()
+                            .is_some_and(|ids| ids.as_slice() == [device.id.clone()]);
+                    if ui.selectable_label(selected, &device.label).clicked() {
+                        self.draft.desktop_audio = true;
+                        self.draft.output_devices = Some(vec![device.id.clone()]);
                     }
                 }
             });
-            let level = self.mic_test.as_ref().map_or(0.0, |test| test.level());
-            ui.add(
-                egui::ProgressBar::new(level)
-                    .fill(ACCENT)
-                    .desired_height(8.0),
-            );
-            if let Some(test) = &self.mic_test {
-                if let Some(error) = test.error() {
-                    ui.colored_label(Color32::LIGHT_RED, error);
+    }
+
+    fn input_selector(&mut self, ui: &mut egui::Ui, devices: &[AudioDevice]) {
+        let label = if !self.draft.microphone {
+            tr("Off")
+        } else if self.draft.input_device.is_empty() {
+            tr("Windows default device")
+        } else {
+            devices
+                .iter()
+                .find(|d| d.id == self.draft.input_device)
+                .map_or(tr("Selected device is disconnected"), |d| d.label.as_str())
+        };
+        super::super::motion::ComboBox::from_id_salt("setup-microphone")
+            .width(ui.available_width())
+            .selected_text(label)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.draft.microphone, false, tr("Off"));
+                if ui
+                    .selectable_label(
+                        self.draft.microphone && self.draft.input_device.is_empty(),
+                        tr("Windows default device"),
+                    )
+                    .clicked()
+                {
+                    self.draft.microphone = true;
+                    self.draft.input_device.clear();
                 }
-                if test.state() != audio::MicTestState::Ready {
-                    ui.ctx().request_repaint_after(Duration::from_millis(30));
+                for device in devices {
+                    if ui
+                        .selectable_label(
+                            self.draft.microphone && self.draft.input_device == device.id,
+                            &device.label,
+                        )
+                        .clicked()
+                    {
+                        self.draft.microphone = true;
+                        self.draft.input_device = device.id.clone();
+                    }
                 }
-            }
-        });
+            });
     }
 }

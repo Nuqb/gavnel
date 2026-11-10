@@ -338,5 +338,19 @@
   "{seconds} s": "{seconds} s",
   "{size} replay memory": "{size} replay yaddaşı",
   "‹  Library": "Kitabxana",
-  "← Back to game detection": "Oyun aşkarlamasına geri dön"
+  "← Back to game detection": "Oyun aşkarlamasına geri dön",
+  "Gavnel {version} is available": "Gavnel {version} is available",
+  "Download update": "Download update",
+  "Update verified. Restart when you are ready; pending recordings will finish saving.": "Update verified. Restart when you are ready; pending recordings will finish saving.",
+  "Restart to update": "Restart to update",
+  "Checks GitHub releases. Downloads and restarts only when you choose.": "Checks GitHub releases. Downloads and restarts only when you choose.",
+  "Checking for updates...": "Checking for updates...",
+  "Installed version: {version}": "Installed version: {version}",
+  "Updates": "Updates",
+  "Release notes": "Release notes",
+  "Downloading and verifying update...": "Downloading and verifying update...",
+  "Check for updates": "Check for updates",
+  "You have the latest version.": "You have the latest version.",
+  "This is a source build. Use your existing launcher to rebuild; in-app installation is available in release installs.": "This is a source build. Use your existing launcher to rebuild; in-app installation is available in release installs.",
+  "Check for updates automatically": "Check for updates automatically"
 }

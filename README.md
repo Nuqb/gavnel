@@ -77,6 +77,12 @@ Gavnel currently has a narrower feature set: Windows with an NVIDIA GPU, a built
 
 **Current target: Windows 11 x64, an SDR display, and an NVIDIA GPU with NVENC support.** AMD/Intel encoding and HDR capture are not supported in this build.
 
+### Download for Windows
+
+[Download the latest Windows installer](https://github.com/Nuqb/gavnel/releases/latest). Run the `Gavnel-Setup-VERSION-x64.exe` asset, then complete setup. No Rust installation or separate FFmpeg download is needed. The installer is per-user and includes an uninstaller.
+
+Installed copies can check for updates under **Settings → General → Updates**. Choose **Download update**, then **Restart to update**; Gavnel finishes saving before updating. Preferences and recordings stay in place. Automatic release checks can be turned off. The installer is currently unsigned; see the release notes and SHA256SUMS.txt on GitHub.
+
 ### Running from this repository
 
 Install stable Rust for Windows MSVC, Visual Studio C++ Build Tools, and the Windows SDK. Then, from the repository folder:

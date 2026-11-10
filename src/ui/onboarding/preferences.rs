@@ -2,7 +2,7 @@ use super::*;
 
 impl Wizard {
     pub(super) fn preferences_page(&mut self, ui: &mut egui::Ui, action: &mut Option<Action>) {
-        group(ui, tr("Save location"), |ui| {
+        controls::group(ui, tr("Save location"), |ui| {
             ui.horizontal(|ui| {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui.button(tr("Browse…")).clicked() {
@@ -15,8 +15,9 @@ impl Wizard {
                 });
             });
         });
-        group(ui, tr("App behavior"), |ui| {
-            ui.checkbox(
+        controls::group(ui, tr("App behavior"), |ui| {
+            controls::checkbox(
+                ui,
                 &mut self.draft.start_with_windows,
                 tr("Open on Windows startup"),
             );
@@ -31,14 +32,18 @@ impl Wizard {
                 );
             });
         });
-        group(ui, tr("Clip feedback"), |ui| {
-            ui.horizontal(|ui| {
-                ui.checkbox(
+        controls::group(ui, tr("Clip feedback"), |ui| {
+            ui.columns(2, |columns| {
+                controls::checkbox(
+                    &mut columns[0],
                     &mut self.draft.clip_feedback.notification,
                     tr("Notification"),
                 );
-                ui.add_space(20.0);
-                ui.checkbox(&mut self.draft.clip_feedback.sound, tr("Sound"));
+                controls::checkbox(
+                    &mut columns[1],
+                    &mut self.draft.clip_feedback.sound,
+                    tr("Sound"),
+                );
             });
         });
     }
@@ -113,22 +118,8 @@ impl Wizard {
                 ui.end_row();
             });
         ui.add_space(16.0);
-        ui.checkbox(&mut self.start_capture, tr("Start capture after setup"));
+        controls::checkbox(ui, &mut self.start_capture, tr("Start capture after setup"));
     }
-}
-
-fn group(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::new()
-        .fill(CARD)
-        .corner_radius(10.0)
-        .inner_margin(10.0)
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.label(RichText::new(title).strong());
-            ui.add_space(4.0);
-            content(ui);
-        });
-    ui.add_space(6.0);
 }
 
 fn on_off(value: bool) -> &'static str {

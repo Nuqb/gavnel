@@ -2,54 +2,6 @@ use super::*;
 use crate::capture_hotkeys::CaptureAction;
 
 impl Wizard {
-    pub(super) fn quality_page(&mut self, ui: &mut egui::Ui) {
-        let presets = [
-            (tr("Small files"), "720p · 30 FPS · 8 Mbps", 720, 30, 8),
-            (tr("Smooth HD"), "720p · 60 FPS · 15 Mbps", 720, 60, 15),
-            (tr("Balanced"), "1080p · 60 FPS · 20 Mbps", 1080, 60, 20),
-            (tr("Extra detail"), "1440p · 60 FPS · 30 Mbps", 1440, 60, 30),
-        ];
-        for row in presets.chunks(2) {
-            ui.columns(2, |columns| {
-                for (ui, &(title, caption, height, fps, bitrate)) in columns.iter_mut().zip(row) {
-                    let selected = (self.draft.height, self.draft.fps, self.draft.bitrate_mbps)
-                        == (height, fps, bitrate);
-                    if ui
-                        .add_sized(
-                            [ui.available_width(), 84.0],
-                            egui::Button::new(
-                                RichText::new(format!("{}\n{caption}", tr(title))).size(14.0),
-                            )
-                            .fill(if selected { ACCENT_DARK } else { CARD })
-                            .stroke(Stroke::new(1.0_f32, if selected { ACCENT } else { LINE })),
-                        )
-                        .clicked()
-                    {
-                        self.draft.height = height;
-                        self.draft.fps = fps;
-                        self.draft.bitrate_mbps = bitrate;
-                    }
-                }
-            });
-            ui.add_space(10.0);
-        }
-        ui.collapsing(tr("Customize quality"), |ui| {
-            super::super::widgets::dropdown(
-                ui,
-                "setup-resolution",
-                &mut self.draft.height,
-                &[(720, "720p"), (1080, "1080p"), (1440, "1440p")],
-            );
-            super::super::widgets::dropdown(
-                ui,
-                "setup-fps",
-                &mut self.draft.fps,
-                &[(30, "30 FPS"), (60, "60 FPS"), (120, "120 FPS")],
-            );
-            super::super::widgets::slider(ui, &mut self.draft.bitrate_mbps, 5..=50, "Mbps");
-        });
-    }
-
     pub(super) fn hotkey_page(&mut self, ui: &mut egui::Ui) {
         for action in CaptureAction::ALL {
             let bindings = self.draft.capture_bindings();
