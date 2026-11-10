@@ -226,7 +226,7 @@ pub(super) fn quick_panel(
     {
         *open = false;
     }
-    if (was_open && !*open) || (anchor.clicked() && !*open) {
+    if !*open && (was_open || anchor.clicked()) {
         egui::Popup::close_all(ui.ctx());
     }
     super::motion::popup(ui.ctx(), id, anchor.rect, *open, rendered);
