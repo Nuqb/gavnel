@@ -10,7 +10,6 @@ from pathlib import Path
 import re
 import time
 import threading
-import requests
 
 from update_game_catalog import ROOT, REVIEW, basename, catalog
 
@@ -21,6 +20,7 @@ STORE_RATE_LIMITED = threading.Event()
 
 
 def fetch(appid):
+    import requests  # Only online audits need this optional dependency.
     path = CACHE / f'{appid}.json'
     if path.exists():
         return json.loads(path.read_text(encoding='utf-8'))
@@ -43,6 +43,7 @@ def fetch(appid):
 
 
 def fetch_store(appid):
+    import requests  # Offline classification tests do not fetch store data.
     path = CACHE / f'store-{appid}.json'
     if path.exists():
         return json.loads(path.read_text(encoding='utf-8'))

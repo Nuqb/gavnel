@@ -16,8 +16,9 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Cache Rust dependencies
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      - name: Restore Rust dependencies
+        id: cargo-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cargo/registry
@@ -27,6 +28,8 @@ jobs:
           key: ${{ runner.os }}-rust-1.95-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-rust-1.95-${{ hashFiles('Cargo.lock') }}-
+      - name: Test catalog tools
+        run: python -S -m unittest discover -s scripts -p "test_*.py"
       - name: Install Rust
         run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
       - name: Select Rust
@@ -39,5 +42,13 @@ jobs:
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Check localization
         run: python scripts/check-locales.py
-      - name: Test catalog tools
-        run: python -m unittest discover -s scripts -p "test_*.py"
+      - name: Save Rust dependencies
+        if: always() && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+            target/.rustc_info.json
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}

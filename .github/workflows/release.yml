@@ -31,8 +31,9 @@ jobs:
           if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Use a stable vX.Y.Z tag.' }
           git rev-parse --verify "refs/tags/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'Release tag does not exist.' }
-      - name: Cache Rust dependencies
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      - name: Restore Rust dependencies
+        id: cargo-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: |
             ~/.cargo/registry
@@ -78,3 +79,13 @@ jobs:
           if (-not (Test-Path -LiteralPath $notes)) { throw 'Add release notes before tagging.' }
           gh release create $env:RELEASE_TAG "$root/Gavnel-Setup-$version-x64.exe" "$root/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Gavnel $env:RELEASE_TAG" --notes-file $notes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Save Rust dependencies
+        if: always() && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+            target/.rustc_info.json
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
