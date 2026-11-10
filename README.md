@@ -3,50 +3,50 @@
 </p>
 
 <p align="center">
-  <strong>Windows · NVIDIA NVENC · Local MP4 &amp; PNG · MIT licensed</strong>
-</p>
-
-<p align="center">
-  <a href="#why-gavnel">The idea</a> ·
-  <a href="#how-it-compares">Comparison</a> ·
-  <a href="#start-clipping">Get started</a> ·
+  <a href="https://github.com/Nuqb/gavnel/releases/latest"><strong>Download for Windows</strong></a> ·
   <a href="docs/usage.md">User guide</a> ·
-  <a href="docs/development.md">Build &amp; contribute</a>
+  <a href="#development">For developers</a>
 </p>
 
----
+Gavnel saves your recent gameplay, full sessions, and screenshots to your PC. **No ads. No account. No subscription.**
 
-## Why Gavnel?
+## Install & play
 
-**A clipping app should help you keep a moment and get back to your game.**
+**Requires Windows 11 x64, an NVIDIA GPU with NVENC, and an SDR display.** AMD/Intel encoding and HDR capture aren't supported yet. Gavnel is in active development.
 
-Gavnel is a local gameplay recorder for people who want their clips on their own PC. Press a key to save what just happened, record a whole session, and find it later in a simple library. Recordings are ordinary files in a folder you choose.
+1. **Download** the `Gavnel-Setup-VERSION-x64.exe` installer from the [latest release](https://github.com/Nuqb/gavnel/releases/latest).
+2. **Install & set up** — open it, then choose your capture source, audio, and save folder.
+3. **Turn capture ON** — play your game and press **F8** to save the last **60 seconds**.
 
-The vision is straightforward: **quick startup, dependable capture, and a small footprint.** No ads, subscription prompts, account setup, social feed, or cloud upload workflow. Recording and playback work locally without an internet connection; sharing is something you do with your files, on your terms.
+No extra software needed. The installer is currently unsigned; release notes and `SHA256SUMS.txt` are included on the release page.
 
-Gavnel is in active development. Its narrow scope is deliberate: make the local recording experience feel good before expanding it.
+## Your moments, one key away
 
-## Play. Clip. Keep.
+- **F8 → Replay clip** · Bookmark when a long recording is running.
+- **Alt + F7 → Start / stop recording**
+- **F4 → Bookmark**
+- **F7 → Screenshot**
 
-1. **Play** — choose a game, window, or monitor and turn capture on.
-2. **Clip** — press **F8** to save the recent action; the default replay length is 60 seconds.
-3. **Keep** — review the MP4 in your library, open its folder, or use it in your favorite editor.
+Change any shortcut in Settings. Find clips in the built-in library or open their folder: videos are **MP4**, screenshots are **PNG**.
 
-### Already in Gavnel
+**Replay clips · Full sessions · Automatic game recording · PC & mic audio · Local playback**
 
-- **A guided first start.** Choose capture, quality, hotkeys, audio, storage, and startup behavior. Skip it or revisit it later; a separate preview makes it easy to try.
-- **Replay clips and long recordings.** Save recent gameplay, start a recording yourself, or automatically record supported game sessions.
-- **A library that stays on your PC.** Thumbnails, game/source folders, search, sorting, and built-in video playback.
-- **Bookmarks and screenshots.** Mark moments in long recordings and save full-resolution PNGs.
-- **Audio you control.** PC audio, microphone input, optional separate tracks, push to talk, and local noise suppression.
-- **Preferences that stick.** Your source, recording settings, save folder, hotkeys, library view, and capture on/off state survive normal restarts.
-- **GPU video encoding.** A native Rust/egui interface, NVIDIA NVENC, and background file saving. No separate FFmpeg installation or Overwolf client.
+<details>
+<summary><strong>Updates, defaults & capture tips</strong></summary>
+
+- Update through **Settings → General → Updates → Download update → Restart to update**. Gavnel finishes saving first and keeps your preferences and recordings. Automatic release checks are optional.
+- Default recording: **1080p · 60 FPS · 20 Mbps · 60-second replay**. PC audio is on; the microphone is off.
+- Capture one source at a time. Game/window capture turns black when the target loses focus while audio continues; monitor capture includes everything visible on that display.
+- Choose **Exit** to finish pending saves. Optional close-to-tray keeps capture running. A crash or power loss can leave a recording unfinished.
+- Recordings stay local, so keep your own backups. Recording and playback work offline.
+
+See the [user guide](docs/usage.md) for audio tracks, push to talk, noise suppression, storage, and playback.
+
+</details>
 
 ## How it compares
 
-Medal and Outplayed are useful for people who want sharing tools, editors, or automatic event highlights. Gavnel's focus is a smaller, self-contained local recorder.
-
-**All three can save recordings locally.** The difference is what comes with that recording experience.
+All three apps save locally. Gavnel focuses on keeping your recordings on your PC.
 
 <p align="center">
   <img src="assets/readme/comparison.png" alt="Gavnel, Medal, and Outplayed comparison: all save locally. Gavnel has no ads, paid tier, or cloud uploads. Medal and Outplayed have free-tier ads, optional paid plans, and optional uploads. Gavnel needs no account; Medal and Outplayed require accounts. Gavnel and Medal are standalone; Outplayed requires Overwolf to be installed. Interface language options: Gavnel 86 including regional choices, with native-speaker review pending; Medal 22; Outplayed 1, English." width="100%">
@@ -73,58 +73,51 @@ Gavnel currently has a narrower feature set: Windows with an NVIDIA GPU, a built
 
 </details>
 
-## Start clipping
 
-**Current target: Windows 11 x64, an SDR display, and an NVIDIA GPU with NVENC support.** AMD/Intel encoding and HDR capture are not supported in this build.
 
-### Download for Windows
+---
 
-[Download the latest Windows installer](https://github.com/Nuqb/gavnel/releases/latest). Run the `Gavnel-Setup-VERSION-x64.exe` asset, then complete setup. No Rust installation or separate FFmpeg download is needed. The installer is per-user and includes an uninstaller.
+## Development
 
-Installed copies can check for updates under **Settings → General → Updates**. Choose **Download update**, then **Restart to update**; Gavnel finishes saving before updating. Preferences and recordings stay in place. Automatic release checks can be turned off. The installer is currently unsigned; see the release notes and SHA256SUMS.txt on GitHub.
+Native **Rust / egui** desktop app, Windows capture, and **NVIDIA NVENC** encoding. Recordings and preferences use local files; there is no application server. No separate FFmpeg installation is required.
 
-### Running from this repository
+### Build & run
 
-Install stable Rust for Windows MSVC, Visual Studio C++ Build Tools, and the Windows SDK. Then, from the repository folder:
+Install stable Rust for Windows MSVC, Visual Studio C++ Build Tools, and the Windows SDK. From the repository folder:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1
 ```
 
-The launcher builds the current source and opens Gavnel. The first build can take a while; later builds are incremental. To add desktop and Start menu shortcuts that use this same launcher:
+The launcher builds current source and opens a versioned executable. Later builds are incremental. If an older build is running, it requests a normal exit so recordings can finish saving.
+
+To create desktop and Start menu shortcuts that use the same launcher:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-launcher.ps1
 ```
 
-In Gavnel, choose your capture source, check your save folder under **Settings → Storage**, and turn capture **ON**. Start your game and press your clip key when something worth keeping happens.
+Keep local shortcuts pointed at the launcher; do not replace them with direct executable links or manually copy binaries to `dist`.
 
-### Default shortcuts
+### Checks & contribution
 
-- **F8** — save a replay clip; add a bookmark during a long recording.
-- **Alt + F7** — start or stop a long recording.
-- **F4** — add a bookmark to a long recording.
-- **F7** — save a screenshot.
+Read the [software quality guide](docs/software-quality.md) before making changes.
 
-All shortcuts are customizable. Existing preferences can differ from these defaults.
+```powershell
+cargo fmt
+cargo test --locked
+cargo clippy --all-targets --locked -- -D warnings
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -BuildOnly
+```
 
-## A few useful details
+Replay retention has a **512 MiB compressed-packet budget**, not a cap on total RAM or GPU memory. Long recordings stream to disk. Startup speed and recording overhead are goals; no comparative performance benchmark is published here.
 
-- Defaults: **1080p · 60 FPS · 20 Mbps · 60-second replay**. PC audio is on; the microphone is off.
-- Capture one source at a time. Game/window capture turns black when the target loses focus while audio continues; monitor capture includes everything visible on that display.
-- Replay retention has a **512 MiB compressed-packet budget**. This is not a cap on total app RAM or GPU memory. Long recordings stream to disk.
-- **Exit** finishes pending saves. Closing to the tray is optional and keeps capture running. A crash or power loss can leave an unfinished recording.
-- Local files need your own backups. Gavnel does not upload them to a recovery service.
+- [Development & diagnostics](docs/development.md) — source map, onboarding previews, and recording diagnostics.
+- [Release packaging](docs/releases.md)
+- [Game detection](docs/game-detection.md)
+- [Localization](docs/localization.md)
 
-Read the [user guide](docs/usage.md) for recording modes, audio, storage, and playback. See [development & diagnostics](docs/development.md) for build instructions and the [software quality guide](docs/software-quality.md) before contributing.
-
----
-
-<p align="center">
-  <img src="assets/gavnel-icon.svg" alt="Gavnel icon" width="32"><br>
-  <strong>Your game. Your moments. Your files.</strong><br>
-  <a href="LICENSE">MIT License</a> · <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a>
-</p>
+[MIT License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 [medal-plans]: https://support.medal.tv/support/solutions/articles/48001218475-medal-premium-faq
 [medal-local]: https://support.medal.tv/support/solutions/articles/48001227747
