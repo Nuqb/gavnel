@@ -254,6 +254,8 @@ mod tests {
         // A test-runner copy provides a real, short-lived parent at the installed path
         // without opening the UI, reading real preferences, or starting any capture.
         std::fs::copy(std::env::current_exe().unwrap(), &target).unwrap();
+        let bytes = std::fs::read(&installer).unwrap();
+        let digest = format!("{:x}", Sha256::digest(&bytes));
         let mut parent = Command::new(&target)
             .args([
                 "--exact",
@@ -263,12 +265,11 @@ mod tests {
             .creation_flags(CREATE_NO_WINDOW.0)
             .spawn()
             .unwrap();
-        let bytes = std::fs::read(&installer).unwrap();
         let plan = Plan {
             parent: parent.id(),
             target: target.clone(),
             installer,
-            digest: format!("{:x}", Sha256::digest(&bytes)),
+            digest,
             size: bytes.len() as u64,
             version: env!("CARGO_PKG_VERSION").into(),
         };

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Added clip editing, project saving, and montage exports.
+- Added application audio selection and optional game highlights.
+- Improved recording shortcuts, playback, editor navigation, and library controls.
+
 ## 0.3.2
 
 - Long recording in the top toolbar opens the clip popup instead of starting a recording.

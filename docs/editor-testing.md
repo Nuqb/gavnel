@@ -1,6 +1,6 @@
 # Local test checklist
 
-Use the desktop source launcher to open the completed build. No public release is published for this work.
+Use the desktop source launcher to open the completed build. Use these checks when preparing an editor release.
 
 1. Open a clip → Edit. Drag both trim handles, enter exact times, undo/redo, and export. Confirm the source is unchanged.
 2. Crop to 9:16 and Square, drag the borders to switch to Custom, and use Play or Space. Confirm the exported framing matches.

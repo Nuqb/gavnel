@@ -4,7 +4,7 @@ Gavnel releases target Windows 11 x64. The per-user installer writes to `%LOCALA
 
 ## Meaning of "push an update"
 
-A request to "push an update" or "push update" includes publishing a new stable
+A request to push changes or an update includes publishing a new stable
 GitHub release, unless the user explicitly asks for a source-only push. Complete
 the process below through reviewing and publishing the workflow's draft. Pushing
 source or creating a draft alone is not completion. Use a new patch version for
