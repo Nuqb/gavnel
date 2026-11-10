@@ -152,6 +152,56 @@ pub fn save(image: &Screenshot, root: &Path, source: &str, limit: Option<u32>) -
     anyhow::bail!("Could not choose a screenshot filename")
 }
 
+/// Copy only a normalized HUD region; OCR never receives full desktop frames.
+pub fn read_region(
+    device: &ID3D11Device,
+    context: &ID3D11DeviceContext,
+    texture: &ID3D11Texture2D,
+    region: [f32; 4],
+) -> Result<Screenshot> {
+    unsafe {
+        let mut desc = D3D11_TEXTURE2D_DESC::default();
+        texture.GetDesc(&mut desc);
+        let [x, y, w, h] = region;
+        let left = (x * desc.Width as f32) as u32;
+        let top = (y * desc.Height as f32) as u32;
+        let width = ((w * desc.Width as f32) as u32)
+            .max(1)
+            .min(desc.Width.saturating_sub(left));
+        let height = ((h * desc.Height as f32) as u32)
+            .max(1)
+            .min(desc.Height.saturating_sub(top));
+        anyhow::ensure!(width > 0 && height > 0, "Invalid HUD region");
+        desc.Width = width;
+        desc.Height = height;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.CPUAccessFlags = 0;
+        desc.BindFlags = 0;
+        desc.MiscFlags = 0;
+        let mut cropped = None;
+        device.CreateTexture2D(&desc, None, Some(&mut cropped))?;
+        let cropped = cropped.context("Could not read HUD region")?;
+        context.CopySubresourceRegion(
+            &cropped,
+            0,
+            0,
+            0,
+            0,
+            texture,
+            0,
+            Some(&D3D11_BOX {
+                left,
+                top,
+                front: 0,
+                right: left + width,
+                bottom: top + height,
+                back: 1,
+            }),
+        );
+        read_texture(device, context, &cropped)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

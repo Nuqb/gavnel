@@ -223,24 +223,20 @@ impl Settings {
             .unwrap_or(self.replay_seconds)
             .max(self.replay_seconds)
     }
-    pub fn primary_clip_id(&mut self) -> u64 {
-        if let Some(clip) = self
-            .edit_capture_bindings()
+    pub fn primary_capture_id(&mut self, action: CaptureAction) -> u64 {
+        let bindings = self.edit_capture_bindings();
+        if let Some(binding) = bindings
             .iter()
-            .find(|b| b.action == CaptureAction::Clip)
+            .find(|b| b.action == action && !b.key.is_empty())
+            .or_else(|| bindings.iter().find(|b| b.action == action))
         {
-            return clip.id;
+            return binding.id;
         }
-        let id = self
-            .edit_capture_bindings()
-            .iter()
-            .map(|b| b.id)
-            .max()
-            .unwrap_or(0)
-            + 1;
+        let id = bindings.iter().map(|b| b.id).max().unwrap_or(0) + 1;
         let clip_seconds = self.replay_seconds;
         self.edit_capture_bindings().push(CaptureHotkey {
             id,
+            action,
             clip_seconds,
             ..CaptureHotkey::default()
         });
@@ -265,6 +261,24 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn primary_capture_targets_the_displayed_action_and_creates_missing_binding() {
+        let mut settings = super::Settings::default();
+        let clip = settings.primary_capture_id(super::CaptureAction::Clip);
+        let long = settings.primary_capture_id(super::CaptureAction::LongRecording);
+        assert_ne!(clip, long);
+        settings
+            .edit_capture_bindings()
+            .retain(|b| b.action != super::CaptureAction::LongRecording);
+        let replacement = settings.primary_capture_id(super::CaptureAction::LongRecording);
+        let binding = settings
+            .capture_bindings()
+            .into_iter()
+            .find(|b| b.id == replacement)
+            .unwrap();
+        assert_eq!(binding.action, super::CaptureAction::LongRecording);
+        assert!(binding.key.is_empty());
+    }
     use super::*;
     #[test]
     fn only_extra_rows_of_the_same_action_can_be_removed() {

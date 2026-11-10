@@ -38,7 +38,9 @@ pub fn delete_capture(path: &Path) -> std::io::Result<()> {
     {
         // The recording has already been removed. A locked sidecar can be left
         // behind without reporting that deleting the recording itself failed.
-        let _ = std::fs::remove_file(crate::bookmarks::path(path));
+        for extension in ["bookmarks", "tracks.json", "events.json"] {
+            let _ = std::fs::remove_file(path.with_extension(extension));
+        }
     }
     Ok(())
 }
@@ -210,14 +212,28 @@ fn organize_existing(root: &Path) -> anyhow::Result<(usize, usize)> {
         if move_without_replacing(&path, &destination).is_err() {
             skipped += 1;
         } else {
-            let bookmarks = crate::bookmarks::path(&path);
-            if bookmarks.exists()
-                && let Err(error) =
-                    move_without_replacing(&bookmarks, &crate::bookmarks::path(&destination))
-            {
-                // Roll back so bookmarks stay with their recording.
+            let mut moved_sidecars: Vec<&str> = Vec::new();
+            let mut failed = false;
+            for extension in ["bookmarks", "tracks.json", "events.json"] {
+                let sidecar = path.with_extension(extension);
+                if sidecar.exists() {
+                    if move_without_replacing(&sidecar, &destination.with_extension(extension))
+                        .is_err()
+                    {
+                        failed = true;
+                        break;
+                    }
+                    moved_sidecars.push(extension);
+                }
+            }
+            if failed {
+                for extension in moved_sidecars {
+                    move_without_replacing(
+                        &destination.with_extension(extension),
+                        &path.with_extension(extension),
+                    )?;
+                }
                 move_without_replacing(&destination, &path)?;
-                drop(error);
                 skipped += 1;
                 continue;
             }
@@ -227,7 +243,7 @@ fn organize_existing(root: &Path) -> anyhow::Result<(usize, usize)> {
     Ok((moved, skipped))
 }
 
-fn move_without_replacing(source: &Path, destination: &Path) -> anyhow::Result<()> {
+pub(crate) fn move_without_replacing(source: &Path, destination: &Path) -> anyhow::Result<()> {
     use std::os::windows::ffi::OsStrExt;
     use windows::{Win32::Storage::FileSystem::MoveFileW, core::PCWSTR};
     let source: Vec<u16> = source.as_os_str().encode_wide().chain(Some(0)).collect();

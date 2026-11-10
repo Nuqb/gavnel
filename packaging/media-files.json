@@ -1,0 +1,12 @@
+{
+  "bin/avcodec-62.dll": "363a28d74929a738de1f36949c98a0a618cb4015ff9bf129ac9d76b9a6e00ede",
+  "bin/avdevice-62.dll": "ab9bd30acbb7904d33e6cdd5405e9068418da85bf97f469a4f81b689b2c12108",
+  "bin/avfilter-11.dll": "7d1fc29593ad6308b871980c56012fd0dc1f73b8e0e519b3f763d2c1313cf67a",
+  "bin/avformat-62.dll": "d76b66320f1ae0960f50ba29ea81f3e3d14f767698c0bbabab3c3f9fa7b7f5c6",
+  "bin/avutil-60.dll": "a5d8857812a26dc2a1e0f9fe15efb709f4521a996fd9d07030615926f518795f",
+  "bin/ffmpeg.exe": "7a0a62b8f3e4919b4af021860450558257111295033384e352a4cf76e4d9ff3d",
+  "bin/ffplay.exe": "351075a8824c68a281531ce03d27be9402a39c349b5fc2c4711c888d997528a0",
+  "bin/ffprobe.exe": "90ba94a2488b04fdf261caaf973f59aa2e272cb9fb5fdf95febc962250d1c56d",
+  "bin/swresample-6.dll": "e6ed709e9d72fb0c26e8d7319281276fa63106af478fb52785e5f9eb6d55592c",
+  "bin/swscale-9.dll": "2bddf906ce3abf77a50000afc204c6df3dd5fe19cdcf9ab5d0b50c6ea5cb9877"
+}

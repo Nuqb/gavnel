@@ -120,8 +120,26 @@ impl Gavnel {
                     );
                 }
                 if response.clicked() {
-                    self.open_player(&clip.path);
+                    if self.selecting_clips && !clip.is_screenshot() {
+                        if let Some(i) = self.montage_selection.iter().position(|p| p == &clip.path)
+                        {
+                            self.montage_selection.remove(i);
+                        } else {
+                            self.montage_selection.push(clip.path.clone());
+                        }
+                    } else {
+                        self.open_player(&clip.path);
+                    }
                 }
+                if self.montage_selection.contains(&clip.path) {
+                    ui.painter().rect_stroke(
+                        rect.shrink(2.0),
+                        6.0,
+                        egui::Stroke::new(3.0, ACCENT),
+                        egui::StrokeKind::Inside,
+                    );
+                }
+
                 response.context_menu(|ui| {
                     ui.spacing_mut().button_padding.x += 4.0;
                     if ui
@@ -133,6 +151,10 @@ impl Gavnel {
                         .clicked()
                     {
                         self.open_player(&clip.path);
+                        ui.close();
+                    }
+                    if !clip.is_screenshot() && ui.button(tr("Edit")).clicked() {
+                        self.begin_editor(vec![clip.path.clone()]);
                         ui.close();
                     }
                     if ui.button(tr("Show in folder")).clicked() {
@@ -161,6 +183,10 @@ impl Gavnel {
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             super::motion::vertical_menu_button(ui, |ui| {
                                 ui.spacing_mut().button_padding.x += 4.0;
+                                if !clip.is_screenshot() && ui.button(tr("Edit")).clicked() {
+                                    self.begin_editor(vec![clip.path.clone()]);
+                                    ui.close();
+                                }
                                 if ui.button(tr("Show in folder")).clicked() {
                                     let _ = platform::reveal(&clip.path);
                                     ui.close();

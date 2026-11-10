@@ -24,19 +24,32 @@ pub struct SessionWriter {
 impl SessionWriter {
     #[cfg(test)]
     pub fn start(source: &str, folder: &Path, video: &VideoConfig, audio: bool) -> Result<Self> {
-        Self::start_limited(source, folder, video, audio, None)
+        Self::start_configured(
+            source,
+            video,
+            &crate::config::Settings {
+                clips_dir: folder.into(),
+                desktop_audio: audio,
+                microphone: false,
+                ..Default::default()
+            },
+            Vec::new(),
+        )
     }
-    pub fn start_limited(
+    pub fn start_configured(
         source: &str,
-        folder: &Path,
         video: &VideoConfig,
-        audio: bool,
-        limit: Option<u32>,
+        settings: &crate::config::Settings,
+        names: Vec<String>,
     ) -> Result<Self> {
+        let folder = &settings.clips_dir;
+        let audio = settings.desktop_audio || settings.microphone;
+        let limit = settings.storage_limit_gb;
         crate::storage::check_limit(folder, limit, 0)?;
         let folder = folder.to_owned();
         // Open before starting capture so permission/storage failures are immediate.
-        let mux = ContinuousMp4::new(source, &folder, video, audio)?;
+        let mut mux = ContinuousMp4::new(source, &folder, video, audio)?;
+        mux.audio_names = names;
         let path = mux.final_path.clone();
         let (tx, rx) = bounded::<Packet>(512);
         let worker = std::thread::Builder::new()
@@ -78,6 +91,9 @@ impl SessionWriter {
         Ok(seconds)
     }
 
+    pub fn event(&self, event: &crate::highlights::GameEvent) -> Result<()> {
+        crate::highlights::save_events(&self.path, std::slice::from_ref(event))
+    }
     pub fn push(&self, packet: Packet) -> Result<()> {
         if self.start.get().is_none() && packet.stream == Stream::Video && packet.keyframe {
             self.start.set(Some(packet.pts));
@@ -122,6 +138,7 @@ struct ContinuousMp4 {
     audio: bool,
     last_audio: Option<u64>,
     extra_audio: Vec<(Stream, u32, Option<u64>)>,
+    audio_names: Vec<String>,
 }
 
 impl ContinuousMp4 {
@@ -179,6 +196,7 @@ impl ContinuousMp4 {
             audio,
             last_audio: None,
             extra_audio: Vec::new(),
+            audio_names: Vec::new(),
         })
     }
 
@@ -223,7 +241,7 @@ impl ContinuousMp4 {
                 )?;
                 self.last_audio = Some(packet.pts);
             }
-            Stream::Desktop | Stream::Microphone if self.audio => {
+            Stream::Desktop | Stream::Microphone | Stream::Application(_) if self.audio => {
                 let index = if let Some(index) = self
                     .extra_audio
                     .iter()
@@ -307,6 +325,18 @@ impl ContinuousMp4 {
                 self.temp_path.display()
             )
         })?;
+        if !self.extra_audio.is_empty() {
+            let mut labels = vec!["Combined".to_owned()];
+            labels.extend(
+                self.extra_audio
+                    .iter()
+                    .map(|(stream, _, _)| crate::audio::track_label(*stream, &self.audio_names)),
+            );
+            std::fs::write(
+                self.final_path.with_extension("tracks.json"),
+                serde_json::to_vec(&labels)?,
+            )?;
+        }
         Ok(self.final_path)
     }
 }
@@ -433,6 +463,12 @@ mod tests {
         assert_eq!(
             std::fs::read_dir(dir.path().join("Session"))
                 .unwrap()
+                .filter(|entry| entry
+                    .as_ref()
+                    .unwrap()
+                    .path()
+                    .extension()
+                    .is_some_and(|e| e == "mp4"))
                 .count(),
             1
         );

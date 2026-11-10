@@ -1,10 +1,13 @@
 mod add_game;
+mod audio_apps;
 mod capture_view;
 mod checkbox;
 mod clip_card;
 mod clips_menu;
 mod delete;
+mod editor;
 use crate::typography as fonts;
+mod highlights;
 mod language;
 mod library_view;
 mod microphone_test;
@@ -73,6 +76,7 @@ const DANGER_DARK: Color32 = Color32::from_rgb(58, 29, 34);
 
 #[derive(Clone, Copy, PartialEq)]
 enum Page {
+    Editor,
     Player,
     Clips,
     Capture,
@@ -98,6 +102,10 @@ pub struct Gavnel {
     lifecycle_test: bool,
     context: egui::Context,
     player: Option<crate::player::Player>,
+    editor: Option<editor::Editor>,
+    media: crate::media::MediaService,
+    montage_selection: Vec<PathBuf>,
+    selecting_clips: bool,
     parent_window: windows::Win32::Foundation::HWND,
     window_actions: platform::WindowActions,
     engine: Engine,
@@ -135,6 +143,7 @@ pub struct Gavnel {
     quick_page: QuickPage,
     quick_open: bool,
     clips_open: bool,
+    long_recording_menu_open: bool,
     clips_capture_owned: bool,
     _activation: platform::WindowActivator,
     started: Instant,
@@ -194,6 +203,10 @@ impl Gavnel {
             lifecycle_test,
             context: ctx.clone(),
             player: None,
+            editor: None,
+            media: crate::media::MediaService::new(),
+            montage_selection: Vec::new(),
+            selecting_clips: false,
             parent_window,
             window_actions,
             engine,
@@ -231,6 +244,7 @@ impl Gavnel {
             quick_page: QuickPage::Overview,
             quick_open: false,
             clips_open: false,
+            long_recording_menu_open: false,
             clips_capture_owned: false,
             _activation: activation,
             started: Instant::now(),
@@ -465,7 +479,7 @@ impl eframe::App for Gavnel {
                 self.settings_edited = None;
             }
             motion::finish(ctx);
-            if self.page != Page::Player {
+            if self.page != Page::Player && self.page != Page::Editor {
                 self.player = None;
             }
             if let Some(path) = self.delete_pending.clone() {

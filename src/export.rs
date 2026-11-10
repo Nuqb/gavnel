@@ -36,6 +36,24 @@ pub fn write_clip(snapshot: &Snapshot, folder: &Path) -> Result<PathBuf> {
     }
     std::fs::rename(&temp_path, &final_path)
         .context("Clip finalization failed; the .partial file was preserved")?;
+    let mut streams = vec![Stream::Desktop, Stream::Microphone];
+    for p in &snapshot.packets {
+        if matches!(p.stream, Stream::Application(_)) && !streams.contains(&p.stream) {
+            streams.push(p.stream);
+        }
+    }
+    let mut labels = vec!["Combined".to_owned()];
+    for stream in streams {
+        if snapshot.packets.iter().any(|p| p.stream == stream) {
+            labels.push(crate::audio::track_label(stream, &snapshot.audio_names));
+        }
+    }
+    if labels.len() > 1 {
+        std::fs::write(
+            final_path.with_extension("tracks.json"),
+            serde_json::to_vec(&labels)?,
+        )?;
+    }
     Ok(final_path)
 }
 
@@ -207,7 +225,15 @@ fn mux(s: &Snapshot, file: File) -> Result<()> {
     } else {
         2
     };
-    for stream in [Stream::Desktop, Stream::Microphone] {
+    let mut extra_streams = vec![Stream::Desktop, Stream::Microphone];
+    for packet in &s.packets {
+        if matches!(packet.stream, Stream::Application(_))
+            && !extra_streams.contains(&packet.stream)
+        {
+            extra_streams.push(packet.stream);
+        }
+    }
+    for stream in extra_streams {
         let packets: Vec<_> = s.packets.iter().filter(|p| p.stream == stream).collect();
         if packets.is_empty() {
             continue;
@@ -279,6 +305,7 @@ mod tests {
     fn failure_does_not_publish_partial_clip() {
         let dir = tempfile::tempdir().unwrap();
         let s = Snapshot {
+            audio_names: Vec::new(),
             source: "test".into(),
             video: VideoConfig {
                 width: 1920,
@@ -299,6 +326,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let budget = Budget::new(1024);
         let s = Snapshot {
+            audio_names: Vec::new(),
             source: "Test".into(),
             video: VideoConfig {
                 width: 1920,
@@ -348,6 +376,7 @@ mod tests {
         })
         .collect();
         let snapshot = Snapshot {
+            audio_names: Vec::new(),
             source: "Audio tracks".into(),
             video: VideoConfig {
                 width: 1920,

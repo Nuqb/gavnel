@@ -16,6 +16,30 @@ impl Gavnel {
             if tab(ui, tr("By game"), self.settings.library_group_by_game).clicked() {
                 self.settings.library_group_by_game = true;
             }
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if ui.button(tr("Open project")).clicked() {
+                    self.open_edit_project();
+                }
+                if ui
+                    .selectable_label(self.selecting_clips, tr("Select clips"))
+                    .clicked()
+                {
+                    self.selecting_clips = !self.selecting_clips;
+                    if !self.selecting_clips {
+                        self.montage_selection.clear();
+                    }
+                }
+                if self.selecting_clips
+                    && ui
+                        .add_enabled(
+                            !self.montage_selection.is_empty(),
+                            egui::Button::new(tr("Create montage")),
+                        )
+                        .clicked()
+                {
+                    self.begin_editor(self.montage_selection.clone());
+                }
+            });
         });
         ui.add_space(4.0);
         ui.separator();

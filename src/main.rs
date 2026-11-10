@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_icons;
 mod audio;
 mod audio_check;
 mod bookmarks;
@@ -10,11 +11,13 @@ mod diagnostics;
 mod engine;
 mod export;
 mod feedback;
+mod highlights;
 mod i18n;
 mod icons;
 mod key_labels;
 mod keyboard;
 mod library;
+mod media;
 mod microphone;
 mod motion_test;
 mod pacing;

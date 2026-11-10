@@ -100,3 +100,5 @@ Record reviewer, locale, date, and scope in the status manifest as reviews occur
 Do not label a catalog verified merely because it passes tests.
 
 The new release-update section uses English fallback copy in catalogs pending translation review. Existing translated messages are preserved.
+
+The editor, app-audio, and automatic-highlight controls added November 10, 2026 use English fallback messages in non-English catalogs pending translation review. See `editor_audio_highlights` in the status manifest.

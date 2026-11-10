@@ -488,6 +488,60 @@ fn startup_command(exe: &Path, launcher: &Path) -> String {
     }
 }
 
+/// Project picker uses the native Windows dialog without changing the working directory.
+pub fn choose_project() -> Result<Option<std::path::PathBuf>> {
+    use windows::Win32::{
+        System::Com::*,
+        UI::{Input::KeyboardAndMouse::GetActiveWindow, Shell::*},
+    };
+    unsafe {
+        let dialog: IFileOpenDialog =
+            CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
+        dialog.SetOptions(FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST | FOS_NOCHANGEDIR)?;
+        match dialog.Show(Some(GetActiveWindow())) {
+            Err(e) if e.code() == windows::core::HRESULT::from_win32(1223) => return Ok(None),
+            Err(e) => return Err(e.into()),
+            Ok(()) => {}
+        }
+        let name = dialog.GetResult()?.GetDisplayName(SIGDN_FILESYSPATH)?;
+        let path = name.to_string();
+        CoTaskMemFree(Some(name.0 as _));
+        Ok(Some(std::path::PathBuf::from(path?)))
+    }
+}
+
+pub fn save_project(initial: &Path) -> Result<Option<std::path::PathBuf>> {
+    use windows::Win32::{
+        System::Com::*,
+        UI::{Input::KeyboardAndMouse::GetActiveWindow, Shell::*},
+    };
+    unsafe {
+        let dialog: IFileSaveDialog =
+            CoCreateInstance(&FileSaveDialog, None, CLSCTX_INPROC_SERVER)?;
+        dialog.SetOptions(
+            FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR | FOS_OVERWRITEPROMPT,
+        )?;
+        let name: Vec<u16> = initial
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        dialog.SetFileName(PCWSTR(name.as_ptr()))?;
+        dialog.SetDefaultExtension(w!("gavnel-project"))?;
+        match dialog.Show(Some(GetActiveWindow())) {
+            Err(e) if e.code() == windows::core::HRESULT::from_win32(1223) => return Ok(None),
+            Err(e) => return Err(e.into()),
+            Ok(()) => {}
+        }
+        let name = dialog.GetResult()?.GetDisplayName(SIGDN_FILESYSPATH)?;
+        let path = name.to_string();
+        CoTaskMemFree(Some(name.0 as _));
+        Ok(Some(std::path::PathBuf::from(path?)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

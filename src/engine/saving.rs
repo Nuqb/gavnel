@@ -76,7 +76,17 @@ fn save(job: SaveJob) -> (Result<PathBuf>, Option<u64>) {
             id,
             snapshot,
             folder,
-        } => (write_clip(&snapshot, &folder), Some(id)),
+            events,
+        } => (
+            write_clip(&snapshot, &folder).and_then(|path| {
+                crate::highlights::save_events(&path, &events)?;
+                for event in &events {
+                    crate::bookmarks::append(&path, event.ticks as f64 / TICKS as f64)?;
+                }
+                Ok(path)
+            }),
+            Some(id),
+        ),
         SaveJob::Screenshot {
             image,
             folder,

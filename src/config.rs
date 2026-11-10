@@ -120,6 +120,15 @@ impl NoiseSuppression {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AudioCaptureMode {
+    #[default]
+    AllPc,
+    SelectedDevices,
+    GameOnly,
+    SelectedApps,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -157,6 +166,11 @@ pub struct Settings {
     pub push_to_talk: bool,
     pub push_to_talk_key: u16,
     pub output_devices: Option<Vec<String>>,
+    pub audio_capture_mode: Option<AudioCaptureMode>,
+    pub audio_apps: Vec<String>,
+    pub highlights: crate::highlights::HighlightSettings,
+    #[serde(skip)]
+    pub game_audio_executable: String,
     pub hotkey: String,
     pub long_recording_hotkey: String,
     pub bookmark_hotkey: String,
@@ -205,6 +219,10 @@ impl Default for Settings {
             push_to_talk: false,
             push_to_talk_key: 0x56,
             output_devices: None,
+            audio_capture_mode: None,
+            audio_apps: Vec::new(),
+            highlights: Default::default(),
+            game_audio_executable: String::new(),
             hotkey: "F8".into(),
             long_recording_hotkey: "Alt+F7".into(),
             bookmark_hotkey: "F4".into(),
@@ -220,6 +238,32 @@ impl Default for Settings {
 }
 
 impl Settings {
+    pub fn audio_mode(&self) -> AudioCaptureMode {
+        self.audio_capture_mode
+            .unwrap_or(if self.output_devices.is_some() {
+                AudioCaptureMode::SelectedDevices
+            } else {
+                AudioCaptureMode::AllPc
+            })
+    }
+    pub fn application_audio(&self) -> bool {
+        matches!(
+            self.audio_mode(),
+            AudioCaptureMode::GameOnly | AudioCaptureMode::SelectedApps
+        )
+    }
+    pub fn application_names(&self) -> Vec<String> {
+        if self.audio_mode() == AudioCaptureMode::GameOnly {
+            if self.game_audio_executable.is_empty() {
+                Vec::new()
+            } else {
+                vec![self.game_audio_executable.clone()]
+            }
+        } else {
+            self.audio_apps.clone()
+        }
+    }
+
     pub fn add_game_profile(&mut self, name: &str, executable: &str) -> Result<()> {
         let name = name.trim();
         let executable = executable.trim();
@@ -302,6 +346,8 @@ impl Settings {
             || self.input_sensitivity_db != previous.input_sensitivity_db
             || self.push_to_talk != previous.push_to_talk
             || self.push_to_talk_key != previous.push_to_talk_key
+            || self.audio_capture_mode != previous.audio_capture_mode
+            || self.audio_apps != previous.audio_apps
             || self.output_devices != previous.output_devices
             || self.storage_limit_gb != previous.storage_limit_gb
     }
@@ -311,6 +357,23 @@ impl Settings {
             .unwrap_or_else(|| PathBuf::from("gavnel-settings.json"))
     }
     pub fn validate(&self) -> Result<()> {
+        self.highlights.validate()?;
+        anyhow::ensure!(
+            self.audio_apps.len() <= 8
+                && self.audio_apps.iter().all(|n| n.len() <= 260
+                    && !n.contains(['/', '\\'])
+                    && n.to_ascii_lowercase().ends_with(".exe")),
+            "Choose up to eight application executable names."
+        );
+        let names: std::collections::HashSet<_> = self
+            .audio_apps
+            .iter()
+            .map(|s| s.to_ascii_lowercase())
+            .collect();
+        anyhow::ensure!(
+            names.len() == self.audio_apps.len(),
+            "Choose each application only once."
+        );
         if let Some(bindings) = &self.recording_hotkeys {
             // Leave room to restore required action rows in an older 32-row setup.
             anyhow::ensure!(bindings.len() <= 36, "Too many recording hotkeys.");

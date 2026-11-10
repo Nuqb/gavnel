@@ -57,6 +57,7 @@ impl Gavnel {
             }
             back = keys.3;
         }
+        let mut edit = None;
         ui.horizontal(|ui| {
             back |= ui.button(tr("‹  Library")).clicked();
             if let Some(player) = &self.player {
@@ -74,20 +75,60 @@ impl Gavnel {
                     .truncate(),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(tr("Show in folder")).clicked() {
+                    if action_icon(
+                        ui,
+                        "edit",
+                        include_bytes!("../../assets/icons/edit.svg"),
+                        "Edit",
+                    )
+                    .clicked()
+                    {
+                        edit = Some(player.path.clone());
+                    }
+                    if action_icon(
+                        ui,
+                        "folder",
+                        include_bytes!("../../assets/icons/folder.svg"),
+                        "Show in folder",
+                    )
+                    .clicked()
+                    {
                         let _ = platform::reveal(&player.path);
                     }
-                    if ui.button(tr("Open externally")).clicked() {
+                    if action_icon(
+                        ui,
+                        "open-external",
+                        include_bytes!("../../assets/icons/open-external.svg"),
+                        "Open externally",
+                    )
+                    .clicked()
+                    {
                         let _ = player.pause();
                         let _ = platform::open(&player.path);
                     }
                 });
             }
         });
+        if let Some(path) = edit {
+            self.begin_editor(vec![path]);
+            return;
+        }
         ui.add_space(16.0);
         let Some(player) = &mut self.player else {
             return;
         };
+        if player.take_click() {
+            let _ = player.toggle();
+            self.quick_open = false;
+            self.clips_open = false;
+            self.long_recording_menu_open = false;
+            if self.clips_capture_owned {
+                self.capturing_hotkey.store(false, Ordering::Relaxed);
+                self.clips_capture_owned = false;
+            }
+            ui.ctx()
+                .data_mut(|data| data.remove::<egui::Rect>(egui::Id::unique("video-popup-rect")));
+        }
         let size = Vec2::new(
             ui.available_width(),
             (ui.available_height()
@@ -101,16 +142,16 @@ impl Gavnel {
         let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
         ui.painter().rect_filled(rect, 6.0, Color32::BLACK);
         let error = player.error();
-        if let Err(e) = player.layout(
-            rect,
-            ui.ctx().pixels_per_point(),
-            !self.quick_open && error.is_none(),
-        ) {
+        if let Err(e) = player.layout(rect, ui.ctx().pixels_per_point(), error.is_none()) {
             self.message = i18n::message(
                 "Player display failed: {error}",
                 &[("error", &e.to_string())],
             );
         }
+        let popup = ui
+            .ctx()
+            .data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("video-popup-rect")));
+        player.set_occlusion(rect, ui.ctx().pixels_per_point(), popup);
         if let Some(error) = error {
             ui.painter().text(
                 rect.center(),
@@ -223,7 +264,25 @@ impl Gavnel {
         }
     }
 }
-fn time(seconds: f64) -> String {
+pub(super) fn time(seconds: f64) -> String {
     let s = seconds.max(0.0) as u64;
     format!("{}:{:02}", s / 60, s % 60)
+}
+
+fn action_icon(ui: &mut egui::Ui, name: &'static str, svg: &[u8], label: &str) -> egui::Response {
+    let texture = crate::icons::texture(ui.ctx(), name, svg, 32);
+    let response = ui.add(
+        egui::Button::image(egui::Image::new((texture.id(), Vec2::splat(20.0))).tint(TEXT))
+            .frame_when_inactive(false)
+            .stroke(egui::Stroke::NONE),
+    );
+    let mut tooltip = egui::Tooltip::for_enabled(&response);
+    tooltip.popup = tooltip
+        .popup
+        .align(egui::emath::RectAlign::TOP_END)
+        .align_alternatives(&[]);
+    tooltip.show(|ui| {
+        ui.label(tr(label));
+    });
+    response
 }

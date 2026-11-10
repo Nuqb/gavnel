@@ -142,3 +142,26 @@ are development-only ignored files under `work/`, never runtime dependencies.
 When packaging a binary, include `THIRD_PARTY_NOTICES.md` and the accompanying
 `assets/fonts/*-OFL.txt` and `assets/fonts/*-LICENSE.txt` files. The fonts are
 embedded in the executable; the notices must still accompany redistribution.
+
+## Editing and highlight verification
+
+`python scripts/get-media.py` prepares the pinned LGPL shared editing runtime.
+The source launcher and installer packaging include it automatically. Export jobs
+run separately from recording and media-inspection workers. Projects and labeled
+event/audio sidecars are local files; there is no database or remote service.
+
+The following ignored tests exercise local media, OCR, and process audio:
+
+```powershell
+cargo test --locked editing_pipeline_preserves_sources_and_checks_real_media -- --ignored
+cargo test --locked windows_ocr_recognizes_synthetic_highlight -- --ignored
+cargo test --locked process_loopback_isolates_selected_application -- --ignored
+cargo test --locked export_editor_previews -- --ignored
+```
+
+The process-audio test plays two quiet synthetic tones and captures only its
+selected child process. The other tests do not record the desktop or microphone.
+Game-event fixtures cover CS2 authentication, duplicates, spectators, transitions,
+and listener cleanup. Visual detectors are experimental; synthetic OCR coverage
+is not a measurement of live Fortnite, Valorant, or Rust accuracy. See
+[the hands-on checklist](editor-testing.md).

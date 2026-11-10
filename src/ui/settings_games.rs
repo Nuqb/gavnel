@@ -20,6 +20,8 @@ impl Gavnel {
             }
         });
         ui.add_space(14.0);
+        self.highlight_settings(ui);
+        ui.add_space(14.0);
         self.custom_game_list(ui);
     }
 

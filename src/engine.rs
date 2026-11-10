@@ -1,3 +1,4 @@
+mod highlights;
 mod recording;
 mod saving;
 mod worker;
@@ -39,6 +40,9 @@ pub struct Status {
     pub fresh_fps: f64,
     pub saving: usize,
     pub message: String,
+    pub highlight_status: String,
+    pub highlight_game: Option<crate::highlights::Game>,
+    pub highlight_preview: Option<Arc<eframe::egui::ColorImage>>,
     pub last_clip: Option<PathBuf>,
     pub saved_count: u64,
 }
@@ -51,6 +55,7 @@ pub enum Command {
     Screenshot(Box<Settings>),
     Bookmark,
     SetOutputFolder(PathBuf),
+    SetHighlights(crate::highlights::HighlightSettings),
     SetFeedback(ClipFeedback, crate::i18n::Language),
     SetReplayPreferences(u32, Option<Vec<crate::capture_hotkeys::CaptureHotkey>>),
     PreviewFeedback(ClipFeedback, crate::i18n::Language),
@@ -79,6 +84,7 @@ enum SaveJob {
         id: u64,
         snapshot: Snapshot,
         folder: PathBuf,
+        events: Vec<crate::highlights::GameEvent>,
     },
     Screenshot {
         image: crate::screenshot::Screenshot,

@@ -21,6 +21,11 @@ pub(super) struct Recording {
     pub(super) capture_fps: f64,
     pub(super) fresh_fps: f64,
     pub(super) session: Option<crate::recording::SessionWriter>,
+    pub(super) highlights: Option<crate::highlights::Runtime>,
+    pub(super) pending_highlights: Vec<crate::highlights::PendingWindow>,
+    pub(super) highlight_settings: crate::highlights::HighlightSettings,
+    pub(super) highlight_at: Instant,
+    pub(super) calibration_at: Instant,
 }
 impl Recording {
     pub(super) fn new(
@@ -29,6 +34,10 @@ impl Recording {
         budget: Arc<Budget>,
         force_dxgi: bool,
     ) -> Result<Self> {
+        let mut audio_settings = settings.clone();
+        if let Target::Window(window) = &target {
+            audio_settings.game_audio_executable = window.executable.clone();
+        }
         let source = CaptureSource::new(&target, force_dxgi)?;
         let (tx, packets) = bounded(256);
         let (error_tx, fatal) = bounded(4);
@@ -45,9 +54,10 @@ impl Recording {
         )?;
         let clock = Clock::new()?;
         let has_audio = settings.desktop_audio || settings.microphone;
+        let audio_names = audio_settings.application_names();
         let audio = if has_audio {
             Some(AudioWorker::start(
-                settings.clone(),
+                audio_settings,
                 clock.clone(),
                 crate::replay::EncoderOutput {
                     budget,
@@ -60,20 +70,48 @@ impl Recording {
         };
         let mut buffer = ReplayBuffer::new(settings.replay_buffer_seconds(), has_audio);
         buffer.video = Some(video.config.clone());
+        buffer.audio_names = audio_names.clone();
         let fullscreen = target.fullscreen();
         let label = target.recording_label(settings);
         let session = if settings.recording_mode.full() {
-            Some(crate::recording::SessionWriter::start_limited(
+            Some(crate::recording::SessionWriter::start_configured(
                 &label,
-                &settings.clips_dir,
                 &video.config,
-                has_audio,
-                settings.storage_limit_gb,
+                settings,
+                audio_names,
             )?)
         } else {
             None
         };
+        let highlights = if let Target::Window(window) = &target {
+            crate::highlights::Game::from_executable(&window.executable)
+                .filter(|game| {
+                    settings
+                        .highlights
+                        .games
+                        .iter()
+                        .any(|g| g.game == *game && g.enabled)
+                })
+                .map(|game| {
+                    crate::highlights::Runtime::new(game, &settings.highlights, clock.clone())
+                })
+        } else {
+            None
+        };
+        if highlights.is_some() {
+            buffer.set_seconds(settings.replay_buffer_seconds().max(
+                crate::highlights::retention_seconds(
+                    settings.highlights.before,
+                    settings.highlights.after,
+                ),
+            ));
+        }
         Ok(Self {
+            highlights,
+            pending_highlights: Vec::new(),
+            highlight_settings: settings.highlights.clone(),
+            highlight_at: Instant::now(),
+            calibration_at: Instant::now(),
             label,
             source,
             target,
@@ -172,6 +210,47 @@ impl Recording {
             });
             shared.lock().unwrap().preview = preview;
         }
+        if now >= self.highlight_at {
+            self.highlight_at = now + Duration::from_millis(400);
+            if let Some(highlights) = &self.highlights {
+                shared.lock().unwrap().highlight_game = Some(highlights.game);
+                shared.lock().unwrap().highlight_status = highlights.status.lock().unwrap().clone();
+                if foreground
+                    && now >= self.calibration_at
+                    && let Some(texture) = &frame
+                {
+                    self.calibration_at = now + Duration::from_secs(2);
+                    if let Ok(image) = crate::screenshot::read_texture(
+                        self.source.device(),
+                        self.source.context(),
+                        texture,
+                    ) {
+                        shared.lock().unwrap().highlight_preview = Some(Arc::new(image.preview()));
+                    }
+                }
+                if foreground
+                    && highlights.wants_frame()
+                    && let Some(texture) = &frame
+                {
+                    let frames = highlights
+                        .rules
+                        .iter()
+                        .filter(|r| highlights.enabled.contains(&r.kind))
+                        .filter_map(|rule| {
+                            crate::screenshot::read_region(
+                                self.source.device(),
+                                self.source.context(),
+                                texture,
+                                rule.region,
+                            )
+                            .ok()
+                            .map(|image| (rule.clone(), image, self.clock.now()))
+                        })
+                        .collect();
+                    highlights.send_frames(frames);
+                }
+            }
+        }
         self.fresh += u64::from(fresh);
         if self.rate_since.elapsed() >= Duration::from_secs(1) {
             let seconds = self.rate_since.elapsed().as_secs_f64();
@@ -189,6 +268,9 @@ pub(super) fn finish_recording(recording: &mut Option<Recording>, shared: &Mutex
     let rec = recording.take();
     {
         let mut state = shared.lock().unwrap();
+        state.highlight_game = None;
+        state.highlight_preview = None;
+        state.highlight_status.clear();
         state.recording = false;
         state.full_recording = false;
         state.elapsed = 0.0;

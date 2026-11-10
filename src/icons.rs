@@ -44,7 +44,13 @@ mod tests {
     use super::*;
     #[test]
     fn every_bundled_navigation_svg_renders() {
-        let assets: [&[u8]; 17] = [
+        let assets: [&[u8]; 23] = [
+            include_bytes!("../assets/icons/editor-trim.svg"),
+            include_bytes!("../assets/icons/editor-crop.svg"),
+            include_bytes!("../assets/icons/editor-undo.svg"),
+            include_bytes!("../assets/icons/editor-redo.svg"),
+            include_bytes!("../assets/icons/editor-reset.svg"),
+            include_bytes!("../assets/icons/editor-center.svg"),
             include_bytes!("../assets/icons/hotkey-clip.svg"),
             include_bytes!("../assets/icons/hotkey-recording.svg"),
             include_bytes!("../assets/icons/hotkey-bookmark.svg"),

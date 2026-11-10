@@ -30,6 +30,10 @@ impl Gavnel {
             self.settings.replay_seconds,
             self.settings.recording_hotkeys.clone(),
         ))?;
+        if self.settings.highlights != previous.highlights {
+            self.engine
+                .send(Command::SetHighlights(self.settings.highlights.clone()))?;
+        }
         self.library.refresh(&self.settings.clips_dir);
         if self.settings.recording_mode == RecordingMode::Off {
             self.engine.send(Command::Stop)?;

@@ -26,7 +26,7 @@ Open the recorder dropdown in the top bar to choose a game, window, or display. 
 
 Under **Settings → Recording**, choose:
 
-- **Manual capture:** keep recent gameplay in the replay buffer; save a clip with your hotkey. Use the long-recording button or shortcut to record a session yourself.
+- **Manual capture:** keep recent gameplay in the replay buffer; save a clip with your hotkey. Use the long-recording shortcut to record a session yourself.
 - **Automatically record entire game session:** detect a supported game, record while it is open, save when it closes, and wait for the next one.
 - **Recording off:** disable capture and recording shortcuts.
 
@@ -99,3 +99,62 @@ choices, including Arabic, Hebrew, Chinese, Japanese, Korean, and Indian languag
 Spanish, Portuguese, English, Chinese, and Serbian include explicit variants. The interface changes without restarting or interrupting an
 active recording. Your choice is remembered. See [language coverage and translation
 review status](localization.md).
+
+## Editor and montages
+
+Open a video and choose **Edit**, or use its **Edit** context-menu action. In the
+Library, choose **Select clips**, select videos in the desired order, then choose
+**Create montage**. The clip strip selects a segment; arrows change its order.
+
+Trim with timeline handles or precise Start/End fields. A bookmark or event's
+**Create clip** action selects 15 seconds before and 5 seconds after that moment.
+Crop supports Original, 16:9, 9:16, Square, and Custom. Drag inside the crop frame
+to move it, or drag any edge/corner to resize it. Resizing switches to Custom.
+Audio offers volume, mute, and solo for the tracks present in the source file.
+Mixed-only recordings cannot be separated after recording.
+
+Use **Play** or **Space** to play/pause from the playhead. Playback is available
+immediately; changed audio mixes prepare an edited playback file in the background.
+The timeline shows video thumbnails, time marks, bookmarks, and draggable trim
+handles. Click or drag the timeline to seek. Edited playback files are cached locally.
+**Export** creates a new H.264/AAC MP4, with optional resolution and file-size limits.
+Originals are preserved. One export can run with one more queued; Cancel removes
+unfinished export files. Exports require an available NVIDIA encoder.
+
+Save reusable edits with **Save project**. Projects reference original videos;
+keep those videos available. Leaving with unsaved edits asks you to
+**Save**, **Discard**, or **Cancel**. **Open project** is available
+in the Library.
+
+## Audio from applications
+
+In **Settings → Audio → Capture audio**, choose **Game only** or **Selected apps**
+to exclude other programs' audio. Selected apps are remembered by executable name
+and reconnected after restarting. Game only requires a selected game/window;
+a display source has no game identity. Missing applications produce silence, not
+an automatic fallback to desktop audio. Up to eight executable names can be selected.
+With Separate Audio Tracks enabled, application and microphone tracks remain
+independently editable; the first combined track is retained for normal playback.
+
+## Automatic highlights
+
+Open **Settings → Game detection → Automatic highlights**. All games default off.
+Before/After control the event clip window. Replay mode saves automatic clips;
+long recordings receive labeled markers instead. Overlapping event windows merge.
+
+CS2 uses its local Game State Integration. **Connect CS2** writes only Gavnel's
+own integration file to the selected `game/csgo/cfg` directory; restart CS2 after
+connecting. Kills, deaths, assists, round transitions/results, and match transitions
+are detected from the local player's published state.
+
+Fortnite, Valorant, and Rust use experimental local Windows OCR against selected
+HUD regions. English OCR must be installed. HUD calibration lets you draw regions
+on the live preview and edit matching phrases. Fortnite targets eliminations,
+player elimination, and Victory Royale; Valorant targets kills/deaths and round
+outcomes; Rust targets death and wounded state, not kills. Icon-only banners,
+streamer/spectator views, languages, and HUD changes may prevent detection or
+cause false events. Live-game accuracy has not been established by synthetic tests.
+
+No game memory access, injection, account credentials, cloud service, or database
+is used. Events and track names live in `.events.json` and `.tracks.json` sidecars;
+keep them with their recordings.

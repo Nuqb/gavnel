@@ -26,7 +26,7 @@
 
 ## Development
 
-Native **Rust / egui** desktop app, Windows capture, and **NVIDIA NVENC** encoding. Recordings and preferences use local files; there is no application server. No separate FFmpeg installation is required.
+Native **Rust / egui** desktop app, Windows capture, and **NVIDIA NVENC** encoding. Recordings and preferences use local files; there is no application server. FFmpeg is bundled for local editing; no separate installation is required.
 
 ### Build & run
 

@@ -5,39 +5,7 @@ impl Gavnel {
     pub(super) fn settings_audio(&mut self, ui: &mut egui::Ui) {
         section(ui, tr("Recording Audio"), |ui| {
             ui.separator();
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(tr("Audio Processes")).strong());
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    super::motion::ComboBox::from_id_salt("audio-processes")
-                        .selected_text(if self.settings.output_devices.is_none() {
-                            tr("All PC audio")
-                        } else {
-                            tr("Selected playback devices")
-                        })
-                        .show_ui(ui, |ui| {
-                            if ui
-                                .selectable_label(
-                                    self.settings.output_devices.is_none(),
-                                    tr("All PC audio"),
-                                )
-                                .clicked()
-                            {
-                                self.settings.output_devices = None;
-                            }
-                            if ui
-                                .selectable_label(
-                                    self.settings.output_devices.is_some(),
-                                    tr("Selected playback devices"),
-                                )
-                                .clicked()
-                            {
-                                self.settings.output_devices.get_or_insert_with(|| {
-                                    self.outputs.iter().map(|d| d.id.clone()).collect()
-                                });
-                            }
-                        });
-                });
-            });
+            self.audio_capture_controls(ui);
             ui.add_space(12.0);
             egui::Frame::new()
                 .fill(CARD)
@@ -59,36 +27,44 @@ impl Gavnel {
                         &mut self.settings.desktop_audio,
                         &mut self.settings.desktop_volume,
                     );
-                    ui.add_enabled_ui(self.settings.desktop_audio, |ui| {
-                        ui.indent("output-devices", |ui| {
-                            let mut all = self.settings.output_devices.is_none();
-                            if super::checkbox::checkbox(ui, &mut all, tr("All playback devices"))
+                    if self.settings.audio_mode()
+                        == crate::config::AudioCaptureMode::SelectedDevices
+                    {
+                        ui.add_enabled_ui(self.settings.desktop_audio, |ui| {
+                            ui.indent("output-devices", |ui| {
+                                let mut all = self.settings.output_devices.is_none();
+                                if super::checkbox::checkbox(
+                                    ui,
+                                    &mut all,
+                                    tr("All playback devices"),
+                                )
                                 .changed()
-                            {
-                                self.settings.output_devices =
-                                    if all { None } else { Some(Vec::new()) };
-                            }
-                            for device in &self.outputs {
-                                let mut selected = self
-                                    .settings
-                                    .output_devices
-                                    .as_ref()
-                                    .is_none_or(|ids| ids.contains(&device.id));
-                                if super::checkbox::checkbox(ui, &mut selected, &device.label)
-                                    .changed()
                                 {
-                                    let ids =
-                                        self.settings.output_devices.get_or_insert_with(|| {
-                                            self.outputs.iter().map(|d| d.id.clone()).collect()
-                                        });
-                                    ids.retain(|id| id != &device.id);
-                                    if selected {
-                                        ids.push(device.id.clone());
+                                    self.settings.output_devices =
+                                        if all { None } else { Some(Vec::new()) };
+                                }
+                                for device in &self.outputs {
+                                    let mut selected = self
+                                        .settings
+                                        .output_devices
+                                        .as_ref()
+                                        .is_none_or(|ids| ids.contains(&device.id));
+                                    if super::checkbox::checkbox(ui, &mut selected, &device.label)
+                                        .changed()
+                                    {
+                                        let ids =
+                                            self.settings.output_devices.get_or_insert_with(|| {
+                                                self.outputs.iter().map(|d| d.id.clone()).collect()
+                                            });
+                                        ids.retain(|id| id != &device.id);
+                                        if selected {
+                                            ids.push(device.id.clone());
+                                        }
                                     }
                                 }
-                            }
+                            });
                         });
-                    });
+                    }
                 });
             ui.separator();
             audio_toggle(

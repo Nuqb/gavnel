@@ -101,22 +101,41 @@ impl Gavnel {
         ui: &mut egui::Ui,
         anchor: &egui::Response,
         opened_from_toolbar: bool,
+        long_recording: bool,
     ) {
-        let mut open = self.clips_open;
+        let mut open = if long_recording {
+            self.long_recording_menu_open
+        } else {
+            self.clips_open
+        };
         super::widgets::quick_panel(
             ui,
             anchor,
-            egui::Id::unique("clips-settings-menu"),
+            egui::Id::unique(if long_recording {
+                "long-recording-settings-menu"
+            } else {
+                "clips-settings-menu"
+            }),
             &mut open,
             opened_from_toolbar,
             |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new(tr("CLIPS")).size(11.0).color(MUTED).strong());
+                    ui.label(
+                        RichText::new(tr(if long_recording {
+                            "Long recording"
+                        } else {
+                            "CLIPS"
+                        }))
+                        .size(11.0)
+                        .color(MUTED)
+                        .strong(),
+                    );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if manage_hotkeys_button(ui).clicked() {
                             self.page = Page::Settings;
                             self.settings_page = SettingsPage::Recording;
                             self.clips_open = false;
+                            self.long_recording_menu_open = false;
                             ui.ctx().data_mut(|data| {
                                 data.insert_temp(egui::Id::unique("focus-hotkeys"), true)
                             });
@@ -126,13 +145,29 @@ impl Gavnel {
                 });
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
-                    let capturing = self.capturing_hotkey.load(Ordering::Relaxed);
+                    let capturing = self.capturing_hotkey.load(Ordering::Relaxed)
+                        && self.settings.capture_bindings().iter().any(|b| {
+                            b.id == self.capturing_action
+                                && b.action
+                                    == if long_recording {
+                                        crate::capture_hotkeys::CaptureAction::LongRecording
+                                    } else {
+                                        crate::capture_hotkeys::CaptureAction::Clip
+                                    }
+                        });
                     let label = if capturing {
                         tr("Press a key…")
-                    } else if self.settings.hotkey.is_empty() {
-                        tr("Not set")
                     } else {
-                        &self.settings.hotkey
+                        let hotkey = if long_recording {
+                            &self.settings.long_recording_hotkey
+                        } else {
+                            &self.settings.hotkey
+                        };
+                        if hotkey.is_empty() {
+                            tr("Not set")
+                        } else {
+                            hotkey
+                        }
                     };
                     if ui
                         .add_sized(
@@ -146,32 +181,79 @@ impl Gavnel {
                         )
                         .clicked()
                     {
-                        self.capturing_action = self.settings.primary_clip_id();
+                        self.capturing_action =
+                            self.settings.primary_capture_id(if long_recording {
+                                crate::capture_hotkeys::CaptureAction::LongRecording
+                            } else {
+                                crate::capture_hotkeys::CaptureAction::Clip
+                            });
                         self.pressed_hotkeys.lock().unwrap().clear();
                         self.capturing_hotkey.store(true, Ordering::Relaxed);
                         self.clips_capture_owned = true;
                     }
-                    super::motion::ComboBox::from_id_salt("clip-menu-duration")
-                        .width(126.0)
-                        .selected_text(duration_label(self.settings.replay_seconds))
-                        .show_ui(ui, |ui| {
-                            for seconds in [5, 10, 15, 30, 45, 60, 90, 120] {
-                                if ui
-                                    .selectable_label(
-                                        self.settings.replay_seconds == seconds,
-                                        duration_label(seconds),
-                                    )
-                                    .clicked()
-                                {
-                                    self.settings.set_primary_clip_seconds(seconds);
+                    if !long_recording {
+                        super::motion::ComboBox::from_id_salt("clip-menu-duration")
+                            .width(126.0)
+                            .selected_text(duration_label(self.settings.replay_seconds))
+                            .show_ui(ui, |ui| {
+                                for seconds in [5, 10, 15, 30, 45, 60, 90, 120] {
+                                    if ui
+                                        .selectable_label(
+                                            self.settings.replay_seconds == seconds,
+                                            duration_label(seconds),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.settings.set_primary_clip_seconds(seconds);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                    }
                 });
+                if long_recording {
+                    ui.horizontal(|ui| {
+                        let capturing = self.capturing_hotkey.load(Ordering::Relaxed)
+                            && self.settings.capture_bindings().iter().any(|b| {
+                                b.id == self.capturing_action
+                                    && b.action == crate::capture_hotkeys::CaptureAction::Bookmark
+                            });
+                        let label = if capturing {
+                            tr("Press a key…")
+                        } else if self.settings.bookmark_hotkey.is_empty() {
+                            tr("Not set")
+                        } else {
+                            &self.settings.bookmark_hotkey
+                        };
+                        if ui
+                            .add_sized(
+                                [196.0, 40.0],
+                                egui::Button::new(
+                                    RichText::new(crate::key_labels::display(label))
+                                        .font(FontId::monospace(14.0)),
+                                )
+                                .fill(if capturing { ACCENT_DARK } else { BG })
+                                .corner_radius(6.0),
+                            )
+                            .clicked()
+                        {
+                            self.capturing_action = self.settings.primary_capture_id(
+                                crate::capture_hotkeys::CaptureAction::Bookmark,
+                            );
+                            self.pressed_hotkeys.lock().unwrap().clear();
+                            self.capturing_hotkey.store(true, Ordering::Relaxed);
+                            self.clips_capture_owned = true;
+                        }
+                        ui.label(tr("Bookmark"));
+                    });
+                }
             },
         );
-        self.clips_open = open && self.clips_open;
-        if self.clips_capture_owned && !self.clips_open {
+        if long_recording {
+            self.long_recording_menu_open = open && self.long_recording_menu_open;
+        } else {
+            self.clips_open = open && self.clips_open;
+        }
+        if self.clips_capture_owned && !self.clips_open && !self.long_recording_menu_open {
             self.capturing_hotkey.store(false, Ordering::Relaxed);
             self.clips_capture_owned = false;
         }

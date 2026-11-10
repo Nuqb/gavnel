@@ -2,6 +2,7 @@ mod aac;
 mod capture;
 mod diagnostics;
 mod mic_test;
+pub mod process;
 mod worker;
 use crate::{
     config::Settings,
@@ -159,6 +160,18 @@ impl Drop for AudioWorker {
         if let Some(w) = self.worker.take() {
             let _ = w.join();
         }
+    }
+}
+
+pub fn track_label(stream: Stream, names: &[String]) -> String {
+    match stream {
+        Stream::Desktop => "PC Audio".into(),
+        Stream::Microphone => "Microphone".into(),
+        Stream::Application(i) => names
+            .get(i as usize)
+            .cloned()
+            .unwrap_or_else(|| format!("Application {}", i + 1)),
+        _ => "Combined".into(),
     }
 }
 

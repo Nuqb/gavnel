@@ -19,6 +19,7 @@ pub(super) enum Glyph {
 }
 impl Gavnel {
     pub(super) fn draw(&mut self, root: &mut egui::Ui, status: &Status) {
+        let previous = (self.page, self.settings_page);
         let rail = if i18n::is_rtl() {
             egui::Panel::right("app-rail")
         } else {
@@ -87,6 +88,7 @@ impl Gavnel {
                     .inner_margin(egui::Margin::symmetric(20, 12)),
             )
             .show(root, |ui| self.toolbar(ui, status));
+        self.guard_editor_navigation(previous);
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(BG).inner_margin(28.0))
             .show(root, |ui| {
@@ -102,6 +104,7 @@ impl Gavnel {
                 self.update_notice(ui);
                 match self.page {
                     Page::Player => self.playback(ui),
+                    Page::Editor => self.edit_view(ui),
                     Page::Clips => self.clips(ui, status),
                     Page::Capture => {
                         egui::ScrollArea::vertical().show(ui, |ui| self.capture(ui, status));
@@ -109,6 +112,8 @@ impl Gavnel {
                     Page::Settings => self.settings(ui),
                 }
             });
+        self.guard_editor_navigation(previous);
+        self.editor_leave_dialog(root.ctx());
     }
 }
 

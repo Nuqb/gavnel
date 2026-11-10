@@ -210,6 +210,11 @@ pub(super) fn quick_panel(
             content(ui);
         });
     let rendered = shown.is_some();
+    if *open && let Some(panel) = &shown {
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(egui::Id::unique("video-popup-rect"), panel.response.rect)
+        });
+    }
     if let Some(shown) = shown
         && *open
         && !opened_from_toolbar

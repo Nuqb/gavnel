@@ -78,3 +78,7 @@ Expanded catalogs were initially generated offline using Google's MADLAD-400 3B
 (Apache-2.0), then edited for UI context and formatting. Model weights and the
 translator are not distributed with Gavnel. Provenance and pending review status
 are recorded in `assets/localization-status.json`.
+
+## FFmpeg editing runtime
+
+The local editor bundles the LGPL shared FFmpeg runtime, including FFmpeg, FFprobe, FFplay, and matching libraries. This runtime reports LGPL-3.0-or-later. Its license text, GPLv3 text, headers, import libraries, documentation, source revision, and build-recipe links accompany the runtime in the `media` directory. See `packaging/media-SOURCES.md` and `packaging/media.json` for the pinned build and acquisition details. Gavnel invokes the tools as separate processes; recording continues to use Windows capture and NVIDIA NVENC directly.

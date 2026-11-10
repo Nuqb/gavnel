@@ -11,15 +11,15 @@ pub(super) struct Inputs {
     pub commands: Receiver<Command>,
 }
 
-struct Worker {
-    input: Inputs,
-    settings: Settings,
+pub(super) struct Worker {
+    pub(super) input: Inputs,
+    pub(super) settings: Settings,
     armed: bool,
-    recording: Option<Recording>,
+    pub(super) recording: Option<Recording>,
     feedback: Option<Feedback>,
     budget: Arc<Budget>,
-    saves: SaveQueue,
-    clip_id: u64,
+    pub(super) saves: SaveQueue,
+    pub(super) clip_id: u64,
     scan: Instant,
     report: Instant,
     retry_after: Instant,
@@ -93,6 +93,7 @@ impl Worker {
             }
             self.scan_source();
             self.tick();
+            self.process_highlights();
             self.report();
         }
     }
@@ -109,6 +110,7 @@ impl Worker {
     }
 
     fn stop(&mut self) {
+        self.flush_highlights(true);
         finish_recording(&mut self.recording, &self.input.shared);
         self.armed = false;
         self.input.shared.lock().unwrap().armed = false;
@@ -116,12 +118,63 @@ impl Worker {
 
     fn handle(&mut self, command: Command) {
         match command {
+            Command::SetHighlights(preferences) => {
+                self.flush_highlights(true);
+                {
+                    let mut state = self.input.shared.lock().unwrap();
+                    state.highlight_game = None;
+                    state.highlight_status.clear();
+                    state.highlight_preview = None;
+                }
+                self.settings.highlights = preferences.clone();
+                if let Some(rec) = &mut self.recording {
+                    rec.highlights = None;
+                    if let Target::Window(window) = &rec.target {
+                        rec.highlights =
+                            crate::highlights::Game::from_executable(&window.executable)
+                                .filter(|game| {
+                                    preferences
+                                        .games
+                                        .iter()
+                                        .any(|g| g.game == *game && g.enabled)
+                                })
+                                .map(|game| {
+                                    crate::highlights::Runtime::new(
+                                        game,
+                                        &preferences,
+                                        rec.clock.clone(),
+                                    )
+                                });
+                    }
+                    rec.highlight_settings = preferences;
+                    rec.buffer
+                        .set_seconds(self.settings.replay_buffer_seconds().max(
+                            if rec.highlights.is_some() {
+                                crate::highlights::retention_seconds(
+                                    rec.highlight_settings.before,
+                                    rec.highlight_settings.after,
+                                )
+                            } else {
+                                0
+                            },
+                        ));
+                }
+            }
             Command::SetReplayPreferences(seconds, hotkeys) => {
                 self.settings.replay_seconds = seconds;
                 self.settings.recording_hotkeys = hotkeys;
                 if let Some(rec) = &mut self.recording {
                     rec.buffer
-                        .set_seconds(self.settings.replay_buffer_seconds());
+                        .set_seconds(self.settings.replay_buffer_seconds().max(
+                            if rec.highlights.is_some() {
+                                crate::highlights::retention_seconds(
+                                    rec.highlight_settings.before,
+                                    rec.highlight_settings.after,
+                                )
+                            } else {
+                                0
+                            },
+                        ));
                 }
             }
             Command::SetFeedback(preferences, language) => {
@@ -177,6 +230,7 @@ impl Worker {
             self.message(error.to_string());
             return;
         }
+        self.flush_highlights(true);
         finish_recording(&mut self.recording, &self.input.shared);
         self.settings = settings;
         self.feedback(FeedbackEvent::Configure(
@@ -288,6 +342,7 @@ impl Worker {
             id: self.clip_id,
             snapshot,
             folder: self.settings.clips_dir.clone(),
+            events: Vec::new(),
         })?;
         self.feedback(FeedbackEvent::Captured {
             id: self.clip_id,
@@ -362,6 +417,7 @@ impl Worker {
     }
 
     fn finish_lost_source(&mut self) {
+        self.flush_highlights(true);
         let full = self
             .recording
             .as_ref()

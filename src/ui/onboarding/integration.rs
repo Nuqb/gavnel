@@ -9,6 +9,7 @@ impl Gavnel {
         ));
         self.quick_open = false;
         self.clips_open = false;
+        self.long_recording_menu_open = false;
         self.source_picker = None;
         self.mic_test = None;
         self.capturing_hotkey.store(true, Ordering::Relaxed);

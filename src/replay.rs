@@ -64,6 +64,7 @@ pub enum Stream {
     Audio,
     Desktop,
     Microphone,
+    Application(u16),
 }
 #[derive(Clone, Debug)]
 pub struct Packet {
@@ -88,12 +89,14 @@ pub struct Snapshot {
     pub start: u64,
     pub end: u64,
     pub has_audio: bool,
+    pub audio_names: Vec<String>,
 }
 pub struct ReplayBuffer {
     packets: VecDeque<Packet>,
     seconds: u64,
     pub video: Option<VideoConfig>,
     pub has_audio: bool,
+    pub audio_names: Vec<String>,
 }
 impl ReplayBuffer {
     pub fn set_seconds(&mut self, seconds: u32) {
@@ -105,6 +108,7 @@ impl ReplayBuffer {
             seconds: seconds as u64,
             video: None,
             has_audio,
+            audio_names: Vec::new(),
         }
     }
     pub fn push(&mut self, packet: Packet) {
@@ -183,6 +187,9 @@ impl ReplayBuffer {
         self.snapshot_for(source, self.seconds as u32)
     }
     pub fn snapshot_for(&self, source: &str, seconds: u32) -> Result<Snapshot> {
+        self.snapshot_until(source, seconds, u64::MAX)
+    }
+    pub fn snapshot_until(&self, source: &str, seconds: u32, until: u64) -> Result<Snapshot> {
         let video = self
             .video
             .clone()
@@ -207,6 +214,7 @@ impl ReplayBuffer {
         } else {
             video_end
         };
+        let end = end.min(until);
         let cutoff = end.saturating_sub(u64::from(seconds).min(self.seconds) * TICKS);
         let start = self
             .packets
@@ -237,6 +245,7 @@ impl ReplayBuffer {
             start,
             end,
             has_audio: self.has_audio,
+            audio_names: self.audio_names.clone(),
         })
     }
 }

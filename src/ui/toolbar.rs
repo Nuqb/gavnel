@@ -1,9 +1,11 @@
-use super::views::{Glyph, icon_button, paint_icon};
+use super::views::{Glyph, paint_icon};
 use super::*;
-use egui::{Align, Align2, FontId, Layout, Rect, Sense};
+use egui::{Align2, FontId, Rect, Sense};
 
 impl Gavnel {
     pub(super) fn toolbar(&mut self, ui: &mut egui::Ui, status: &Status) {
+        ui.ctx()
+            .data_mut(|data| data.remove::<egui::Rect>(egui::Id::unique("video-popup-rect")));
         let popup_id = ui.make_persistent_id("quick-settings-panel");
         ui.horizontal_centered(|ui| {
             let mut opened_from_toolbar = false;
@@ -68,6 +70,7 @@ impl Gavnel {
                 self.quick_page = QuickPage::Overview;
                 self.quick_open = !self.quick_open;
                 self.clips_open = false;
+                self.long_recording_menu_open = false;
                 opened_from_toolbar = true;
             }
             ui.add_space(2.0);
@@ -81,66 +84,23 @@ impl Gavnel {
                 ui,
                 &self.settings.long_recording_hotkey,
                 tr("Long recording"),
-                self.clips_open,
+                self.long_recording_menu_open,
             );
-            let clips_clicked = clips.clicked() || long_recording.clicked();
-            if clips_clicked {
-                self.clips_open = !self.clips_open;
+            let clips_clicked = clips.clicked();
+            let long_clicked = long_recording.clicked();
+            if clips_clicked || long_clicked {
+                if self.clips_capture_owned {
+                    self.capturing_hotkey.store(false, Ordering::Relaxed);
+                    self.clips_capture_owned = false;
+                }
+                if clips_clicked {
+                    self.clips_open = !self.clips_open;
+                    self.long_recording_menu_open = false;
+                } else {
+                    self.long_recording_menu_open = !self.long_recording_menu_open;
+                    self.clips_open = false;
+                }
                 self.quick_open = false;
-            }
-            if self.page != Page::Clips {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui
-                        .add_enabled(
-                            status.recording && status.buffered > 0.0,
-                            egui::Button::new(
-                                RichText::new(if status.full_recording {
-                                    tr("Add bookmark")
-                                } else {
-                                    tr("Save clip")
-                                })
-                                .strong()
-                                .color(Color32::from_rgb(28, 17, 9)),
-                            )
-                            .fill(ACCENT)
-                            .corner_radius(6.0)
-                            .min_size(Vec2::new(92.0, 36.0)),
-                        )
-                        .clicked()
-                    {
-                        self.send(Command::Save);
-                    }
-                    if ui
-                        .add(
-                            egui::Button::new(self.recording_button(status))
-                                .corner_radius(6.0)
-                                .min_size(Vec2::new(95.0, 36.0)),
-                        )
-                        .clicked()
-                    {
-                        self.toggle_recording(status);
-                    }
-                    if icon_button(
-                        ui,
-                        Glyph::Mic,
-                        if self.settings.microphone {
-                            ACCENT
-                        } else {
-                            MUTED
-                        },
-                        tr("Quick audio settings"),
-                    )
-                    .clicked()
-                    {
-                        self.clips_open = false;
-                        self.quick_page = QuickPage::Audio;
-                        self.quick_open = true;
-                        opened_from_toolbar = true;
-                    }
-                    if icon_button(ui, Glyph::Folder, MUTED, tr("Choose clip folder")).clicked() {
-                        self.browse_clip_folder();
-                    }
-                });
             }
             let mut open = self.quick_open;
             super::widgets::quick_panel(
@@ -156,8 +116,11 @@ impl Gavnel {
                 },
             );
             self.quick_open = open && self.quick_open && self.source_picker.is_none();
-            let anchor = clips.union(long_recording);
-            self.clips_menu(ui, &anchor, clips_clicked);
+            if self.long_recording_menu_open {
+                self.clips_menu(ui, &long_recording, long_clicked, true);
+            } else {
+                self.clips_menu(ui, &clips, clips_clicked, false);
+            }
         });
     }
 }
