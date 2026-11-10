@@ -1,6 +1,6 @@
 [package]
 name = "gavnel"
-version = "0.2.6"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.95"
 description = "A lightweight Windows replay clipper with GPU capture and NVIDIA hardware encoding"
@@ -39,6 +39,9 @@ windows = { version = "0.62", features = [
 nnnoiseless = { version = "0.5.2", default-features = false }
 rustfft = "6"
 png = "0.18"
+ureq = { version = "3", features = ["json"] }
+sha2 = "0.10"
+semver = "1"
 
 [profile.release]
 lto = "thin"

@@ -469,7 +469,12 @@ pub fn startup(enabled: bool) -> Result<()> {
 }
 
 fn startup_command(exe: &Path, launcher: &Path) -> String {
-    if launcher.is_file() {
+    if launcher.is_file()
+        && launcher
+            .parent()
+            .and_then(Path::parent)
+            .is_some_and(|root| exe.starts_with(root.join("target")))
+    {
         let windows = std::env::var_os("WINDIR")
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| std::path::PathBuf::from("C:\\Windows"));
@@ -489,8 +494,9 @@ mod tests {
     #[test]
     fn windows_startup_uses_source_launcher_when_available_and_executable_when_packaged() {
         let dir = tempfile::tempdir().unwrap();
-        let launcher = dir.path().join("launch.vbs");
-        let exe = dir.path().join("Gavnel.exe");
+        let launcher = dir.path().join("scripts/launch.vbs");
+        std::fs::create_dir_all(launcher.parent().unwrap()).unwrap();
+        let exe = dir.path().join("target/release/Gavnel.exe");
         assert_eq!(
             startup_command(&exe, &launcher),
             format!("\"{}\" --background", exe.display())

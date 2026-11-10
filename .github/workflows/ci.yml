@@ -1,0 +1,32 @@
+name: CI
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+      - name: Select Rust
+        run: rustup override set 1.95.0
+      - name: Check formatting
+        run: cargo fmt --check
+      - name: Test
+        run: cargo test --locked
+      - name: Lint
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Check localization
+        run: python scripts/check-locales.py
+      - name: Test catalog tools
+        run: python -m unittest discover -s scripts -p "test_*.py"

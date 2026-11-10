@@ -3,6 +3,8 @@ use super::*;
 use egui::{Align, Layout};
 impl Gavnel {
     pub(super) fn settings_general(&mut self, ui: &mut egui::Ui) {
+        self.update_settings(ui);
+        ui.add_space(16.0);
         section(ui, tr("Language"), |ui| {
             super::language::selector(ui, &mut self.settings.language, "settings-language");
         });

@@ -5,6 +5,7 @@ mod delete;
 use crate::typography as fonts;
 mod language;
 mod library_view;
+mod microphone_test;
 mod motion;
 pub(crate) mod onboarding;
 mod playback;
@@ -24,6 +25,7 @@ mod test_render;
 mod theme;
 mod toolbar;
 mod tray;
+mod updates;
 mod views;
 mod widgets;
 
@@ -88,6 +90,8 @@ enum QuickPage {
 }
 pub struct Gavnel {
     onboarding: Option<onboarding::Wizard>,
+    updates: crate::update::Controller,
+    lifecycle_test: bool,
     context: egui::Context,
     player: Option<crate::player::Player>,
     parent_window: windows::Win32::Foundation::HWND,
@@ -183,6 +187,8 @@ impl Gavnel {
         let thumbnails = Thumbnails::new(ctx.clone(), visible.clone());
         let mut app = Self {
             onboarding: None,
+            updates: crate::update::Controller::default(),
+            lifecycle_test,
             context: ctx.clone(),
             player: None,
             parent_window,
@@ -363,6 +369,10 @@ impl Gavnel {
 impl eframe::App for Gavnel {
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = &root.ctx().clone();
+        self.updates.poll(
+            ctx,
+            !self.lifecycle_test && self.updates.installed && self.settings.check_for_updates,
+        );
         i18n::with_language(self.settings.language, || {
             if self.quitting.load(Ordering::Acquire) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -480,6 +490,9 @@ impl eframe::App for Gavnel {
         });
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if self.lifecycle_test {
+            return;
+        }
         // Save before the engine shuts down; shutdown itself must not turn the
         // next launch off or restart capture to apply pending preferences.
         self.settings.capture_enabled = Some(self.engine.snapshot().armed);

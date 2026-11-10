@@ -1,6 +1,6 @@
 use super::views::*;
 use super::*;
-use egui::{Align, Layout, Pos2, Rect, Sense};
+use egui::{Align, Layout};
 impl Gavnel {
     pub(super) fn settings_audio(&mut self, ui: &mut egui::Ui) {
         section(ui, tr("Recording Audio"), |ui| {
@@ -120,83 +120,7 @@ impl Gavnel {
                 });
             });
             ui.separator();
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(tr("Mic Test")).strong());
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if let Some(test) = &self.mic_test {
-                        match test.state() {
-                            audio::MicTestState::Recording => {
-                                if ui.button(tr("Playback")).clicked() {
-                                    test.playback();
-                                    ui.ctx().request_repaint_after(Duration::from_millis(30));
-                                }
-                                if ui.button(tr("End Test")).clicked() {
-                                    test.end();
-                                }
-                            }
-                            audio::MicTestState::Playing => {
-                                if ui.button(tr("Stop Playback")).clicked() {
-                                    test.stop_playback();
-                                }
-                            }
-                            audio::MicTestState::Ready => {
-                                if ui.button(tr("Start Test")).clicked() {
-                                    self.mic_test =
-                                        Some(audio::MicTest::start(self.settings.clone()));
-                                } else if test.has_recording()
-                                    && ui.button(tr("Playback")).clicked()
-                                {
-                                    test.playback();
-                                    ui.ctx().request_repaint_after(Duration::from_millis(30));
-                                }
-                            }
-                        }
-                    } else if ui.button(tr("Start Test")).clicked() {
-                        self.mic_test = Some(audio::MicTest::start(self.settings.clone()));
-                    }
-                });
-            });
-            let level = self.mic_test.as_ref().map_or(0.0, |test| test.level());
-            if let Some(test) = &self.mic_test {
-                if let Some(error) = test.error() {
-                    ui.colored_label(Color32::LIGHT_RED, error);
-                }
-                if test.state() != audio::MicTestState::Ready {
-                    ui.ctx().request_repaint_after(Duration::from_millis(30));
-                }
-            }
-            let (rect, _) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 28.0), Sense::hover());
-            for i in 0..70 {
-                let x = rect.left() + i as f32 * rect.width() / 70.0;
-                ui.painter().rect_filled(
-                    Rect::from_min_size(
-                        Pos2::new(x, rect.top()),
-                        Vec2::new((rect.width() / 70.0 - 3.0).max(1.0), rect.height()),
-                    ),
-                    0.0,
-                    if (i as f32) < level * 70.0 {
-                        ACCENT
-                    } else {
-                        MUTED.gamma_multiply(0.45)
-                    },
-                );
-            }
-            if self.settings.input_sensitivity_enabled && !self.settings.push_to_talk {
-                let x = rect.left()
-                    + rect.width() * ((self.settings.input_sensitivity_db + 100.0) / 100.0);
-                ui.painter().line_segment(
-                    [Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())],
-                    egui::Stroke::new(2.0_f32, TEXT),
-                );
-            }
-            ui.label(
-                RichText::new(tr(
-                    "Mic level: -100 to 0 dB · White line: sensitivity threshold",
-                ))
-                .size(11.0)
-                .color(MUTED),
-            );
+            super::microphone_test::show(ui, &self.settings, &mut self.mic_test);
             ui.separator();
             audio_toggle(
                 ui,

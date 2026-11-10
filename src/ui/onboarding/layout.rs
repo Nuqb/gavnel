@@ -170,7 +170,11 @@ impl Wizard {
             ui.scope(|ui| {
                 ui.spacing_mut().item_spacing.y = 6.0;
                 ui.set_opacity(0.35 + progress * 0.65);
-                self.content(ui, devices, action);
+                egui::ScrollArea::vertical()
+                    .id_salt("setup-content")
+                    .max_height((height - 48.0).max(100.0))
+                    .auto_shrink([false, true])
+                    .show(ui, |ui| self.content(ui, devices, action));
             });
         });
     }
@@ -193,7 +197,7 @@ impl Wizard {
                             "{current} of {total}",
                             &[
                                 ("current", &(self.step.index() + 1).to_string()),
-                                ("total", "7"),
+                                ("total", &Step::ALL.len().to_string()),
                             ],
                         ))
                         .color(MUTED)

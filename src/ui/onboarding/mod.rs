@@ -1,22 +1,22 @@
 //! First-run setup edits a private draft. Only the host commits Finish or Skip.
 mod audio_page;
-mod capture;
+mod controls;
 mod integration;
 mod layout;
 pub(super) use integration::open_preview;
 mod preferences;
 pub(crate) mod preview;
+mod quality;
 mod recording;
 #[cfg(test)]
 mod tests;
 
 use super::*;
-use egui::{Align, Layout, Sense, Stroke};
+use egui::{Align, Layout, Stroke};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Step {
     Welcome,
-    Capture,
     Quality,
     Hotkeys,
     Audio,
@@ -24,9 +24,8 @@ enum Step {
     Ready,
 }
 impl Step {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 6] = [
         Self::Welcome,
-        Self::Capture,
         Self::Quality,
         Self::Hotkeys,
         Self::Audio,
@@ -39,7 +38,6 @@ impl Step {
     fn label(self) -> &'static str {
         tr(match self {
             Self::Welcome => "Welcome",
-            Self::Capture => "Capture source",
             Self::Quality => "Recording quality",
             Self::Hotkeys => "Your hotkeys",
             Self::Audio => "Audio",
@@ -50,9 +48,8 @@ impl Step {
 }
 
 pub(super) struct Devices<'a> {
-    monitors: &'a [MonitorInfo],
-    windows: &'a [WindowInfo],
     inputs: &'a [AudioDevice],
+    outputs: &'a [AudioDevice],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -60,7 +57,6 @@ pub(super) enum Action {
     Skip,
     Finish,
     BrowseFolder,
-    Refresh,
 }
 
 pub(super) struct Wizard {
@@ -97,7 +93,6 @@ impl Wizard {
         settings.capture_enabled =
             Some(self.start_capture && settings.recording_mode != RecordingMode::Off);
         settings.validate()?;
-        self.validate_source()?;
         super::shortcuts::parse_bindings(&settings)?;
         Ok(settings)
     }
@@ -109,21 +104,8 @@ impl Wizard {
         saved
     }
 
-    fn validate_source(&self) -> Result<()> {
-        anyhow::ensure!(
-            self.draft.mode != CaptureMode::Window || !self.draft.window_title.is_empty(),
-            "Choose a window, or use automatic game detection."
-        );
-        anyhow::ensure!(
-            self.draft.mode != CaptureMode::Monitor || self.draft.monitor_index > 0,
-            "Choose a display."
-        );
-        Ok(())
-    }
-
     fn advance(&mut self) {
         let result = match self.step {
-            Step::Capture => self.validate_source(),
             Step::Hotkeys => super::shortcuts::parse_bindings(&self.draft).map(|_| ()),
             _ => Ok(()),
         };
@@ -131,7 +113,7 @@ impl Wizard {
             self.error = error.to_string();
             return;
         }
-        self.go_to(Step::ALL[(self.step.index() + 1).min(6)]);
+        self.go_to(Step::ALL[(self.step.index() + 1).min(Step::ALL.len() - 1)]);
     }
 
     fn go_to(&mut self, step: Step) {
@@ -145,7 +127,6 @@ impl Wizard {
     fn content(&mut self, ui: &mut egui::Ui, devices: &Devices<'_>, action: &mut Option<Action>) {
         match self.step {
             Step::Welcome => {}
-            Step::Capture => self.capture_page(ui, devices, action),
             Step::Quality => self.quality_page(ui),
             Step::Hotkeys => self.hotkey_page(ui),
             Step::Audio => self.audio_page(ui, devices),

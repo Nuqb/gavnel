@@ -8,3 +8,7 @@
 *.log
 
 __pycache__/
+
+# Private signing material must never be committed.
+*.pfx
+*.p12

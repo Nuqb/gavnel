@@ -26,10 +26,19 @@ mod storage;
 mod thumbnails;
 mod typography;
 mod ui;
+mod update;
 mod verify;
 mod video;
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|arg| arg == "--version") {
+        println!("Gavnel {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    if update::early(&args)? {
+        return Ok(());
+    }
+
     if args.iter().any(|arg| arg == "--onboarding-preview") {
         return ui::onboarding::preview::run();
     }

@@ -99,6 +99,7 @@ impl Gavnel {
                     });
                     ui.add_space(8.0);
                 }
+                self.update_notice(ui);
                 match self.page {
                     Page::Player => self.playback(ui),
                     Page::Clips => self.clips(ui, status),

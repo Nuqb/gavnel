@@ -22,9 +22,8 @@ impl Gavnel {
         let action = wizard.show(
             root,
             Devices {
-                monitors: &self.monitors,
-                windows: &self.windows,
                 inputs: &self.inputs,
+                outputs: &self.outputs,
             },
         );
         let result = match action {
@@ -38,12 +37,6 @@ impl Gavnel {
                     Ok(None) => {}
                     Err(error) => wizard.error = error.to_string(),
                 }
-                Ok(false)
-            }
-            Some(Action::Refresh) => {
-                self.monitors = sources::monitors();
-                self.windows = sources::windows();
-                self.inputs = audio::devices(true);
                 Ok(false)
             }
             None => Ok(false),

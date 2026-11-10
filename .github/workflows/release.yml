@@ -1,0 +1,62 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to package (vX.Y.Z)
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  windows-installer:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Use a stable vX.Y.Z tag.' }
+          git rev-parse --verify "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Release tag does not exist.' }
+      - name: Install Rust
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+      - name: Select Rust
+        run: rustup override set 1.95.0
+      - name: Verify source
+        shell: pwsh
+        run: |
+          cargo fmt --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --locked --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/check-locales.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build installer and notices
+        shell: pwsh
+        run: ./scripts/package-release.ps1 -ExpectedVersion $env:RELEASE_TAG.Substring(1)
+      - name: Create draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          $root = "work/releases/$env:RELEASE_TAG"
+          $notes = "docs/releases/$env:RELEASE_TAG.md"
+          if (-not (Test-Path -LiteralPath $notes)) { throw 'Add release notes before tagging.' }
+          gh release create $env:RELEASE_TAG "$root/Gavnel-Setup-$version-x64.exe" "$root/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Gavnel $env:RELEASE_TAG" --notes-file $notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

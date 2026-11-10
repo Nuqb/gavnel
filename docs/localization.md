@@ -98,3 +98,5 @@ Review Traditional Chinese conversion, Serbian/Uzbek transliteration, technical
 recording vocabulary, gender, tone, and all protected-slot repairs in particular.
 Record reviewer, locale, date, and scope in the status manifest as reviews occur.
 Do not label a catalog verified merely because it passes tests.
+
+The new release-update section uses English fallback copy in catalogs pending translation review. Existing translated messages are preserved.

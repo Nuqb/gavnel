@@ -3,9 +3,8 @@ use super::*;
 
 struct Preview {
     wizard: Wizard,
-    monitors: Vec<MonitorInfo>,
-    windows: Vec<WindowInfo>,
     inputs: Vec<AudioDevice>,
+    outputs: Vec<AudioDevice>,
     finished: bool,
 }
 impl Preview {
@@ -14,9 +13,8 @@ impl Preview {
         wizard.preview = true;
         Self {
             wizard,
-            monitors: sources::monitors(),
-            windows: sources::windows(),
             inputs: audio::devices(true),
+            outputs: audio::devices(false),
             finished: false,
         }
     }
@@ -44,19 +42,13 @@ impl eframe::App for Preview {
             match self.wizard.show(
                 root,
                 Devices {
-                    monitors: &self.monitors,
-                    windows: &self.windows,
                     inputs: &self.inputs,
+                    outputs: &self.outputs,
                 },
             ) {
                 Some(Action::Skip | Action::Finish) => {
                     self.wizard.mic_test = None;
                     self.finished = true;
-                }
-                Some(Action::Refresh) => {
-                    self.monitors = sources::monitors();
-                    self.windows = sources::windows();
-                    self.inputs = audio::devices(true);
                 }
                 Some(Action::BrowseFolder) => {
                     match platform::choose_clip_folder(std::path::Path::new(

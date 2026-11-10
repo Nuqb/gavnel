@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible Gavnel problem.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include steps, expected behavior, and actual behavior. Do not include private recordings or credentials.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Gavnel version
+    validations:
+      required: true
+  - type: textarea
+    id: system
+    attributes:
+      label: Windows, GPU, driver, and capture mode
+    validations:
+      required: true
