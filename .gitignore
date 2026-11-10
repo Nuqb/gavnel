@@ -12,3 +12,6 @@ __pycache__/
 # Private signing material must never be committed.
 *.pfx
 *.p12
+
+# Local agent instructions.
+/AGENTS.md
