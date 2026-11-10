@@ -31,22 +31,8 @@ impl Gavnel {
                 "Installed version: {version}",
                 &[("version", env!("CARGO_PKG_VERSION"))],
             ));
-            ui.checkbox(
-                &mut self.settings.check_for_updates,
-                tr("Check for updates automatically"),
-            );
-            ui.label(
-                RichText::new(tr(
-                    "Checks GitHub releases. Downloads and restarts only when you choose.",
-                ))
-                .size(12.0)
-                .color(MUTED),
-            );
             ui.add_space(8.0);
             self.update_controls(ui);
-            if !self.updates.installed {
-                ui.label(RichText::new(tr("This is a source build. Use your existing launcher to rebuild; in-app installation is available in release installs.")).size(12.0).color(MUTED));
-            }
         });
     }
     fn update_controls(&mut self, ui: &mut egui::Ui) {

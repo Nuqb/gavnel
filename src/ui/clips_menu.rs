@@ -20,9 +20,11 @@ pub(super) fn clip_button(
     } else {
         hotkey
     };
-    let key = ui
-        .painter()
-        .layout_no_wrap(hotkey.to_owned(), FontId::monospace(12.0), TEXT);
+    let key = ui.painter().layout_no_wrap(
+        crate::key_labels::display(hotkey),
+        FontId::monospace(12.0),
+        TEXT,
+    );
     let caption = ui.painter().layout_no_wrap(
         i18n::message("Clip {duration}", &[("duration", &duration_label(seconds))]),
         FontId::proportional(13.0),
@@ -110,9 +112,12 @@ impl Gavnel {
                     if ui
                         .add_sized(
                             [196.0, 40.0],
-                            egui::Button::new(RichText::new(label).font(FontId::monospace(14.0)))
-                                .fill(if capturing { ACCENT_DARK } else { BG })
-                                .corner_radius(6.0),
+                            egui::Button::new(
+                                RichText::new(crate::key_labels::display(label))
+                                    .font(FontId::monospace(14.0)),
+                            )
+                            .fill(if capturing { ACCENT_DARK } else { BG })
+                            .corner_radius(6.0),
                         )
                         .clicked()
                     {

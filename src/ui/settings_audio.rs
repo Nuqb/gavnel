@@ -62,12 +62,11 @@ impl Gavnel {
                     ui.add_enabled_ui(self.settings.desktop_audio, |ui| {
                         ui.indent("output-devices", |ui| {
                             let mut all = self.settings.output_devices.is_none();
-                            if ui.checkbox(&mut all, tr("All playback devices")).changed() {
-                                self.settings.output_devices = if all {
-                                    None
-                                } else {
-                                    Some(self.outputs.iter().map(|d| d.id.clone()).collect())
-                                };
+                            if super::checkbox::checkbox(ui, &mut all, tr("All playback devices"))
+                                .changed()
+                            {
+                                self.settings.output_devices =
+                                    if all { None } else { Some(Vec::new()) };
                             }
                             for device in &self.outputs {
                                 let mut selected = self
@@ -75,7 +74,9 @@ impl Gavnel {
                                     .output_devices
                                     .as_ref()
                                     .is_none_or(|ids| ids.contains(&device.id));
-                                if ui.checkbox(&mut selected, &device.label).changed() {
+                                if super::checkbox::checkbox(ui, &mut selected, &device.label)
+                                    .changed()
+                                {
                                     let ids =
                                         self.settings.output_devices.get_or_insert_with(|| {
                                             self.outputs.iter().map(|d| d.id.clone()).collect()
@@ -127,7 +128,6 @@ impl Gavnel {
                 tr("Input Sensitivity"),
                 &mut self.settings.input_sensitivity_enabled,
             );
-            ui.label(RichText::new(tr("Mutes the mic below your threshold. Lower values pick up quieter speech. Push to Talk bypasses this threshold.")).size(12.0).color(MUTED));
             ui.add_enabled_ui(
                 self.settings.input_sensitivity_enabled && !self.settings.push_to_talk,
                 |ui| {
@@ -157,12 +157,6 @@ impl Gavnel {
                         );
                     }
                 });
-            ui.label(RichText::new(match self.settings.noise_suppression_mode {
-                            NoiseSuppression::None => tr("Keeps the original mic sound. Best for a quiet room or an already filtered mic."),
-                            NoiseSuppression::Standard => tr("Reduces steady fan noise and hiss. Use AI for typing and other changing background noise."),
-                            NoiseSuppression::Neural => tr("On-device AI filtering for background noise such as typing and fans. May change singing or music."),
-                        }).size(12.0).color(MUTED));
-            ui.label(RichText::new(tr("Changing microphone settings clears the old test. Start Test to hear the current settings.")).size(12.0).color(MUTED));
             ui.separator();
             audio_toggle(ui, tr("Push To Talk"), &mut self.settings.push_to_talk);
             ui.add_enabled_ui(self.settings.push_to_talk, |ui| {

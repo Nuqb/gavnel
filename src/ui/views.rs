@@ -141,7 +141,7 @@ pub(super) fn audio_volume_row(
     volume: &mut f32,
 ) {
     ui.horizontal(|ui| {
-        ui.checkbox(enabled, "");
+        super::checkbox::checkbox(ui, enabled, "");
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::hover());
         paint_icon(ui.painter(), rect, glyph, MUTED);
         ui.label(RichText::new(tr(label)).strong());
@@ -173,6 +173,7 @@ pub(super) fn badge(ui: &mut egui::Ui, text: &str, bg: Color32, color: Color32) 
         });
 }
 pub(super) fn keycap(ui: &mut egui::Ui, text: &str) {
+    let text = crate::key_labels::display(text);
     egui::Frame::new()
         .fill(Color32::from_rgb(42, 42, 47))
         .stroke(Stroke::new(1.0_f32, Color32::from_gray(65)))
@@ -258,24 +259,43 @@ pub(super) fn icon_button(
     response.on_hover_text(tr(label))
 }
 pub(super) fn section(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) {
+    section_with_header(
+        ui,
+        |ui| {
+            ui.label(RichText::new(tr(title)).size(16.0).strong());
+            if title == tr("Recording Mode") {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    super::widgets::recording_mode_help(ui);
+                });
+            }
+        },
+        content,
+    );
+}
+
+pub(super) fn settings_panel_frame() -> egui::Frame {
     egui::Frame::new()
         .fill(PANEL)
         .stroke(Stroke::new(1.0_f32, LINE))
         .corner_radius(8.0)
-        .inner_margin(20.0)
-        .show(ui, |ui| {
-            ui.set_min_width((ui.available_width() - 1.0).max(0.0));
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(tr(title)).size(16.0).strong());
-                if title == tr("Recording Mode") {
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        super::widgets::recording_mode_help(ui);
-                    });
-                }
-            });
-            ui.add_space(12.0);
-            content(ui);
-        });
+        .inner_margin(egui::Margin {
+            left: 20,
+            right: 20,
+            top: 10,
+            bottom: 16,
+        })
+}
+pub(super) fn section_with_header(
+    ui: &mut egui::Ui,
+    header: impl FnOnce(&mut egui::Ui),
+    content: impl FnOnce(&mut egui::Ui),
+) {
+    settings_panel_frame().show(ui, |ui| {
+        ui.set_min_width((ui.available_width() - 1.0).max(0.0));
+        ui.horizontal(header);
+        ui.add_space(8.0);
+        content(ui);
+    });
 }
 pub(super) fn description(ui: &mut egui::Ui, title: &str, detail: &str) {
     ui.label(RichText::new(tr(title)).strong());

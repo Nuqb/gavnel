@@ -7,6 +7,10 @@ New-Item -ItemType Directory -Force (Split-Path $log) | Out-Null
 $lock = [System.Threading.Mutex]::new($false, 'Local\Gavnel.SourceLauncher')
 $locked = $false
 try {
+    if (-not $BuildOnly -and -not $Background) {
+        Write-Host 'Starting Gavnel. Checking the latest source; a rebuild can take a few minutes.'
+        Write-Host "Progress and errors are saved to $log"
+    }
     # A desktop click during a BuildOnly run must still launch once it finishes.
     try { $locked = $lock.WaitOne(120000) } catch [System.Threading.AbandonedMutexException] { $locked = $true }
     if (-not $locked) { throw 'Gavnel is still building or finishing an earlier launch. Please try again shortly.' }
@@ -16,12 +20,14 @@ try {
         # Cargo checks its dependency graph, including assets, on every launch.
         # Use a separate output folder so a running build never locks the compiler output.
         $ErrorActionPreference = 'Continue'
-        & cargo build --release --locked --target-dir target/launcher 2>&1 | ForEach-Object { $_.ToString() } | Out-File -LiteralPath $log -Append
+        & cargo build --release --locked --target-dir target/launcher 2>&1 | ForEach-Object {
+            if (-not $BuildOnly -and -not $Background) { Write-Host $_.ToString() }
+            $_.ToString()
+        } | Out-File -LiteralPath $log -Append
         $ErrorActionPreference = 'Stop'
         if ($LASTEXITCODE -ne 0) { throw "Could not build Gavnel. See $log" }
     } finally { Pop-Location }
     $built = Join-Path $projectRoot 'target\launcher\release\gavnel.exe'
-    if ($BuildOnly) { exit 0 }
     # Use .NET directly: Windows PowerShell launched from newer hosts can
     # inherit a module path where Get-FileHash cannot be loaded.
     $hashStream = [System.IO.File]::OpenRead($built)
@@ -32,6 +38,11 @@ try {
     $app = Join-Path $runDir 'Gavnel.exe'
     New-Item -ItemType Directory -Force $runDir | Out-Null
     if (-not (Test-Path -LiteralPath $app)) { Copy-Item -LiteralPath $built -Destination $app }
+    # Publish only a complete versioned executable, including after BuildOnly.
+    $ready = Join-Path $projectRoot 'target\launcher\ready.txt'
+    [System.IO.File]::WriteAllText("$ready.tmp", $hash)
+    Move-Item -LiteralPath "$ready.tmp" -Destination $ready -Force
+    if ($BuildOnly) { exit 0 }
     if ($OnboardingPreview) {
         Start-Process -FilePath $app -ArgumentList '--onboarding-preview' -WorkingDirectory $projectRoot -WindowStyle Normal
         exit 0
@@ -52,7 +63,12 @@ try {
         $start.ArgumentList = '--background'
         $start.WindowStyle = 'Hidden'
     }
-    Start-Process @start
+    $launched = Start-Process @start -PassThru
+    "[$(Get-Date -Format o)] Started PID $($launched.Id): $app" | Add-Content -LiteralPath $log
+    if ($launched.WaitForExit(3000)) {
+        "[$(Get-Date -Format o)] Startup process exited with code $($launched.ExitCode)" | Add-Content -LiteralPath $log
+        if ($launched.ExitCode -ne 0) { throw "Gavnel exited during startup (code $($launched.ExitCode)). See $log" }
+    }
 } catch {
     $_ | Out-String | Add-Content -LiteralPath $log
     if ($BuildOnly) { [Console]::Error.WriteLine($_.Exception.Message) }

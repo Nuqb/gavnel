@@ -1,4 +1,6 @@
+mod add_game;
 mod capture_view;
+mod checkbox;
 mod clip_card;
 mod clips_menu;
 mod delete;
@@ -11,6 +13,7 @@ pub(crate) mod onboarding;
 mod playback;
 mod preferences;
 mod quick;
+mod radio;
 mod settings;
 mod settings_audio;
 mod settings_games;
@@ -30,6 +33,7 @@ mod views;
 mod widgets;
 
 use crate::i18n::{self, tr};
+use crate::keyboard::Manager as GlobalHotKeyManager;
 use crate::{
     audio::{self, AudioDevice},
     config::{CaptureMode, LibrarySort as Sort, RecordingMode, Settings},
@@ -41,7 +45,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use eframe::egui::{self, Color32, RichText, Vec2};
-use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState, hotkey::HotKey};
+use global_hotkey::{GlobalHotKeyEvent, HotKeyState, hotkey::HotKey};
 use std::{
     collections::HashMap,
     path::PathBuf,
@@ -121,8 +125,7 @@ pub struct Gavnel {
     textures: HashMap<PathBuf, egui::TextureHandle>,
     message: String,
     storage_text: String,
-    profile_name: String,
-    profile_exe: String,
+    add_game_dialog: Option<add_game::Dialog>,
     delete_pending: Option<PathBuf>,
     delete_error: Option<String>,
     last_saved: u64,
@@ -218,8 +221,7 @@ impl Gavnel {
             thumbnails,
             textures: HashMap::new(),
             message: load_message,
-            profile_name: String::new(),
-            profile_exe: String::new(),
+            add_game_dialog: None,
             delete_pending: None,
             delete_error: None,
             last_saved: 0,
@@ -369,10 +371,8 @@ impl Gavnel {
 impl eframe::App for Gavnel {
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = &root.ctx().clone();
-        self.updates.poll(
-            ctx,
-            !self.lifecycle_test && self.updates.installed && self.settings.check_for_updates,
-        );
+        self.updates
+            .poll(ctx, !self.lifecycle_test && self.updates.installed);
         i18n::with_language(self.settings.language, || {
             if self.quitting.load(Ordering::Acquire) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -435,6 +435,11 @@ impl eframe::App for Gavnel {
             i18n::with_language(self.settings.language, || {
                 self.draw(root, &status);
                 self.show_source_picker(ctx, &status);
+                if let Some(dialog) = &mut self.add_game_dialog
+                    && dialog.show(ctx, &mut self.settings)
+                {
+                    self.add_game_dialog = None;
+                }
             });
             let changed = self.settings != *self.active.lock().unwrap();
             if changed {

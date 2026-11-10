@@ -26,7 +26,9 @@ impl Wizard {
                     if ui
                         .add_sized(
                             [180.0, 40.0],
-                            egui::Button::new(RichText::new(label).color(ACCENT)),
+                            egui::Button::new(
+                                RichText::new(crate::key_labels::display(label)).color(ACCENT),
+                            ),
                         )
                         .clicked()
                     {

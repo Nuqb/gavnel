@@ -6,32 +6,7 @@ impl Gavnel {
         let all = self.library.clips.lock().unwrap().clone();
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr("Library")).size(27.0).strong());
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if icon_button(ui, Glyph::Folder, MUTED, tr("Open clips folder")).clicked() {
-                    self.open_folder();
-                }
-                if icon_button(ui, Glyph::Refresh, MUTED, tr("Refresh library")).clicked() {
-                    self.library.refresh(&self.settings.clips_dir);
-                }
-                let width = (ui.available_width() - 120.0).clamp(145.0, 280.0);
-                egui::Frame::new()
-                    .fill(PANEL)
-                    .stroke(Stroke::new(1.0_f32, LINE))
-                    .corner_radius(6.0)
-                    .inner_margin(egui::Margin::symmetric(10, 5))
-                    .show(ui, |ui| {
-                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                            let (r, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
-                            paint_icon(ui.painter(), r, Glyph::Search, MUTED);
-                            ui.add(
-                                egui::TextEdit::singleline(&mut self.search)
-                                    .hint_text(tr("Search your clips"))
-                                    .frame(egui::Frame::NONE)
-                                    .desired_width(width),
-                            );
-                        });
-                    });
-            });
+            library_search(ui, &mut self.search);
         });
         ui.add_space(17.0);
         ui.horizontal(|ui| {
@@ -41,11 +16,6 @@ impl Gavnel {
             if tab(ui, tr("By game"), self.settings.library_group_by_game).clicked() {
                 self.settings.library_group_by_game = true;
             }
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.label(RichText::new(tr("On this PC")).color(MUTED).size(12.0));
-                let (r, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
-                paint_icon(ui.painter(), r, Glyph::Folder, MUTED);
-            });
         });
         ui.add_space(4.0);
         ui.separator();
@@ -238,5 +208,116 @@ impl Gavnel {
                 .color(Color32::from_gray(108)),
             );
         });
+    }
+}
+
+/// Position both contents from the final bar rectangle, independent of row growth.
+fn library_search(ui: &mut egui::Ui, search: &mut String) -> Rect {
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 48.0), Sense::hover());
+    ui.painter().rect(
+        rect,
+        6.0,
+        PANEL,
+        Stroke::new(1.0_f32, LINE),
+        StrokeKind::Inside,
+    );
+    let icon = Rect::from_center_size(
+        egui::pos2(rect.left() + 18.0, rect.center().y),
+        Vec2::splat(16.0),
+    );
+    paint_icon(ui.painter(), icon, Glyph::Search, MUTED);
+    let text = Rect::from_min_max(
+        egui::pos2(rect.left() + 36.0, rect.top() + 1.0),
+        egui::pos2(rect.right() - 12.0, rect.bottom() - 1.0),
+    );
+    ui.put(
+        text,
+        egui::TextEdit::singleline(search)
+            .hint_text(tr("Search your clips"))
+            .align(egui::Align2::LEFT_CENTER)
+            .margin(egui::Margin::ZERO)
+            .frame(egui::Frame::NONE),
+    );
+    rect
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::*;
+    fn shapes(shape: &egui::Shape) -> Vec<&egui::Shape> {
+        match shape {
+            egui::Shape::Vec(children) => children.iter().flat_map(shapes).collect(),
+            _ => vec![shape],
+        }
+    }
+    #[test]
+    fn search_contents_stay_centered_without_shrinking_the_bar() {
+        for width in [520.0, 1160.0] {
+            for value in ["", "Valorant"] {
+                let ctx = egui::Context::default();
+                super::super::theme::apply(&ctx);
+                let mut search = value.to_owned();
+                let mut bar = Rect::NOTHING;
+                let mut remaining = 0.0;
+                let mut render = |ui: &mut egui::Ui| {
+                    egui::CentralPanel::default().show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new("Library").size(27.0).strong());
+                            remaining = ui.available_width();
+                            bar = library_search(ui, &mut search);
+                        });
+                    });
+                };
+                let input = egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        Vec2::new(width, 100.0),
+                    )),
+                    ..Default::default()
+                };
+                let _ = super::super::test_render::run(&ctx, input.clone(), &mut render);
+                let output = super::super::test_render::run(&ctx, input, &mut render);
+                assert_eq!(bar.height(), 48.0);
+                assert!((bar.width() - remaining).abs() < 1.0);
+                let drawn: Vec<_> = output
+                    .shapes
+                    .iter()
+                    .flat_map(|s| shapes(&s.shape))
+                    .collect();
+                let text = drawn
+                    .iter()
+                    .find_map(|s| match s {
+                        egui::Shape::Text(text)
+                            if text.galley.text()
+                                == if value.is_empty() {
+                                    "Search your clips"
+                                } else {
+                                    value
+                                } =>
+                        {
+                            Some(text.pos.y + text.galley.size().y / 2.0)
+                        }
+                        _ => None,
+                    })
+                    .expect("Search text must be visible");
+                let icon = drawn
+                    .iter()
+                    .find_map(|s| match s {
+                        egui::Shape::Mesh(mesh)
+                            if (mesh.calc_bounds().width() - 16.0).abs() < 0.1 =>
+                        {
+                            Some(mesh.calc_bounds().center().y)
+                        }
+                        _ => None,
+                    })
+                    .expect("Search icon must be visible");
+                assert!(
+                    (text - bar.center().y).abs() <= 1.0,
+                    "text center {text}, bar center {}",
+                    bar.center().y
+                );
+                assert!((icon - bar.center().y).abs() <= 0.1);
+            }
+        }
     }
 }

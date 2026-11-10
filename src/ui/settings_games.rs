@@ -21,33 +21,45 @@ impl Gavnel {
         });
         ui.add_space(14.0);
         self.custom_game_list(ui);
-        self.add_game_form(ui);
     }
 
     fn custom_game_list(&mut self, ui: &mut egui::Ui) {
         let mut remove = None;
-        section(ui, tr("Your custom games"), |ui| {
-            let mut any = false;
-            for (index, profile) in self.settings.profiles.iter().enumerate() {
-                if profile.is_official() {
-                    continue;
-                }
-                any = true;
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(RichText::new(&profile.name).strong());
-                        ui.label(RichText::new(&profile.executable).size(11.0).color(MUTED));
-                    });
-                    if ui.small_button(tr("Remove")).clicked() {
-                        remove = Some(index);
-                    }
+        let mut add = false;
+        section_with_header(
+            ui,
+            |ui| {
+                ui.label(RichText::new(tr("Your custom games")).size(16.0).strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    add = ui.button(format!("+ {}", tr("Add game"))).clicked();
                 });
-                ui.add_space(5.0);
-            }
-            if !any {
-                ui.label(RichText::new(tr("No custom games added yet.")).color(MUTED));
-            }
-        });
+            },
+            |ui| {
+                let mut any = false;
+                for (index, profile) in self.settings.profiles.iter().enumerate() {
+                    if profile.is_official() {
+                        continue;
+                    }
+                    any = true;
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(RichText::new(&profile.name).strong());
+                            ui.label(RichText::new(&profile.executable).size(11.0).color(MUTED));
+                        });
+                        if ui.small_button(tr("Remove")).clicked() {
+                            remove = Some(index);
+                        }
+                    });
+                    ui.add_space(5.0);
+                }
+                if !any {
+                    ui.label(RichText::new(tr("No custom games added yet.")).color(MUTED));
+                }
+            },
+        );
+        if add {
+            self.add_game_dialog = Some(Default::default());
+        }
         if let Some(index) = remove {
             self.settings.profiles.remove(index);
         }
@@ -92,42 +104,6 @@ impl Gavnel {
             let start = rows.start * columns;
             let end = (rows.end * columns).min(games.len());
             game_grid(ui, &games[start..end], columns);
-        });
-    }
-
-    fn add_game_form(&mut self, ui: &mut egui::Ui) {
-        section(ui, tr("Add a game"), |ui| {
-            description(
-                ui,
-                tr("Custom game profile"),
-                tr("Enter the program's executable filename, without a folder path."),
-            );
-            ui.horizontal(|ui| {
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.profile_name)
-                        .hint_text(tr("Game name"))
-                        .margin(egui::Margin::symmetric(12, 9))
-                        .desired_width(180.0),
-                );
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.profile_exe)
-                        .hint_text("GameClient.exe")
-                        .margin(egui::Margin::symmetric(12, 9))
-                        .desired_width(240.0),
-                );
-            });
-            if ui.button(tr("Add game")).clicked() {
-                match self
-                    .settings
-                    .add_game_profile(&self.profile_name, &self.profile_exe)
-                {
-                    Ok(()) => {
-                        self.profile_exe.clear();
-                        self.profile_name.clear();
-                    }
-                    Err(error) => self.message = error.to_string(),
-                }
-            }
         });
     }
 }
@@ -223,12 +199,13 @@ fn game_search(ui: &mut egui::Ui, search: &mut String) -> bool {
         .corner_radius(6.0)
         .inner_margin(egui::Margin::symmetric(10, 5))
         .show(ui, |ui| {
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+            ui.horizontal(|ui| {
                 let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), egui::Sense::hover());
                 paint_icon(ui.painter(), rect, Glyph::Search, MUTED);
                 ui.add(
                     egui::TextEdit::singleline(search)
                         .hint_text(tr("Search games or executable names"))
+                        .align(egui::Align2::LEFT_CENTER)
                         .frame(egui::Frame::NONE)
                         .desired_width(ui.available_width()),
                 )
@@ -252,5 +229,37 @@ fn game_grid(ui: &mut egui::Ui, games: &[GameCard], columns: usize) {
                 game_card(column, game);
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_row_leaves_room_for_games_at_different_window_sizes() {
+        for size in [Vec2::new(640.0, 480.0), Vec2::new(1280.0, 944.0)] {
+            let ctx = egui::Context::default();
+            super::super::theme::apply(&ctx);
+            let mut search = String::new();
+            let mut games_top = 0.0;
+            let _ = super::super::test_render::run(
+                &ctx,
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        game_search(ui, &mut search);
+                        games_top = ui.label("Game results").rect.top();
+                    });
+                },
+            );
+            assert!(
+                games_top < 80.0,
+                "Search consumed the page: results start at {games_top}"
+            );
+        }
     }
 }

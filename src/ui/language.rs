@@ -151,7 +151,7 @@ fn row(ui: &mut egui::Ui, language: i18n::Language, selected: bool) -> egui::Res
                 });
                 if selected {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.colored_label(ACCENT, "✓");
+                        super::checkbox::indicator(ui);
                     });
                 }
             });

@@ -14,7 +14,7 @@ The initial public release requires a public GitHub repository. Making a private
 
 ## Update behavior
 
-Installed builds check the latest stable release on startup and at roughly six-hour intervals while active; automatic checks can be disabled in Settings. Source builds do not check automatically and continue to use `scripts/launch.ps1`. Manual checking uses the unauthenticated public GitHub API; no access token is shipped.
+Installed builds check the latest stable release on startup and at roughly six-hour intervals while active. Source builds do not check automatically and continue to use `scripts/launch.ps1`. Manual checking uses the unauthenticated public GitHub API; no access token is shipped.
 
 Update metadata must name a newer stable semantic version and `Gavnel-Setup-VERSION-x64.exe`, with the exact download URL in this repository and GitHub's `sha256:` digest. Metadata and download sizes, redirects, HTTPS, and timeouts are bounded. Updates are downloaded only after the user chooses Download update. The installer is verified before presenting Restart to update and rechecked by the helper after graceful shutdown. The helper is a separate executable copy so Windows file locks do not interrupt recordings. The installer preserves the installation directory and leaves settings and recordings alone.
 

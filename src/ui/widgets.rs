@@ -85,16 +85,11 @@ pub(super) fn clickable_cursor(ctx: &egui::Context) {
 pub(super) fn recording_modes(ui: &mut egui::Ui, mode: &mut RecordingMode) -> bool {
     let previous = *mode;
     ui.scope(|ui| {
-        ui.spacing_mut().item_spacing.y = 3.0;
-        ui.spacing_mut().interact_size.y = 22.0;
-        ui.spacing_mut().button_padding.y = 3.0;
-        for (value, title, detail) in recording_mode_options() {
-            ui.radio_value(mode, value, RichText::new(title).strong());
-            ui.horizontal(|ui| {
-                ui.add_space(24.0);
-                ui.label(RichText::new(detail).size(12.0).color(MUTED));
-            });
-            ui.add_space(8.0);
+        ui.spacing_mut().item_spacing.y = 4.0;
+        ui.spacing_mut().interact_size.y = 32.0;
+        ui.spacing_mut().button_padding.y = 5.0;
+        for (value, title, _) in recording_mode_options() {
+            super::radio::radio_value(ui, mode, value, RichText::new(title).size(14.0));
         }
     });
     *mode != previous
@@ -294,11 +289,13 @@ pub(super) fn toggle(ui: &mut egui::Ui, value: &mut bool) -> egui::Response {
         *value = !*value;
         response.mark_changed();
     }
-    let background = if *value {
-        ACCENT
-    } else {
-        Color32::from_rgb(68, 68, 73)
-    };
+    let amount = ui.ctx().animate_bool_with_time_and_easing(
+        response.id.with("toggle-motion"),
+        *value,
+        0.16,
+        egui::emath::easing::cubic_out,
+    );
+    let background = Color32::from_rgb(68, 68, 73).lerp_to_gamma(ACCENT, amount);
     ui.painter().rect_filled(rect, 11.0, background);
     if response.hovered() {
         ui.painter().rect_stroke(
@@ -308,11 +305,7 @@ pub(super) fn toggle(ui: &mut egui::Ui, value: &mut bool) -> egui::Response {
             egui::StrokeKind::Inside,
         );
     }
-    let x = if *value {
-        rect.right() - 11.0
-    } else {
-        rect.left() + 11.0
-    };
+    let x = egui::lerp((rect.left() + 11.0)..=(rect.right() - 11.0), amount);
     ui.painter().circle_filled(
         egui::pos2(x, rect.center().y),
         8.0,
@@ -551,36 +544,8 @@ mod recording_mode_tests {
             (tr("Recording off"), RecordingMode::Off),
             (tr("Manual capture"), RecordingMode::Clips),
         ] {
-            let selected_title = recording_mode_options()
-                .into_iter()
-                .find(|(value, _, _)| *value == mode)
-                .unwrap()
-                .1;
             let mut output = frame(&ctx, &mut mode, vec![]);
             for _ in 0..2 {
-                output = frame(&ctx, &mut mode, vec![]);
-            }
-            let anchor = output
-                .shapes
-                .iter()
-                .find_map(|shape| find_text(&shape.shape, selected_title))
-                .expect("Selected mode missing from dropdown");
-            for pressed in [true, false] {
-                frame(
-                    &ctx,
-                    &mut mode,
-                    vec![
-                        egui::Event::PointerMoved(anchor),
-                        egui::Event::PointerButton {
-                            pos: anchor,
-                            button: egui::PointerButton::Primary,
-                            pressed,
-                            modifiers: Default::default(),
-                        },
-                    ],
-                );
-            }
-            for _ in 0..16 {
                 output = frame(&ctx, &mut mode, vec![]);
             }
             let position = output

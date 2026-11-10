@@ -16,7 +16,7 @@ impl Wizard {
             });
         });
         controls::group(ui, tr("App behavior"), |ui| {
-            controls::checkbox(
+            super::super::checkbox::checkbox(
                 ui,
                 &mut self.draft.start_with_windows,
                 tr("Open on Windows startup"),
@@ -34,12 +34,12 @@ impl Wizard {
         });
         controls::group(ui, tr("Clip feedback"), |ui| {
             ui.columns(2, |columns| {
-                controls::checkbox(
+                super::super::checkbox::checkbox(
                     &mut columns[0],
                     &mut self.draft.clip_feedback.notification,
                     tr("Notification"),
                 );
-                controls::checkbox(
+                super::super::checkbox::checkbox(
                     &mut columns[1],
                     &mut self.draft.clip_feedback.sound,
                     tr("Sound"),
@@ -118,7 +118,11 @@ impl Wizard {
                 ui.end_row();
             });
         ui.add_space(16.0);
-        controls::checkbox(ui, &mut self.start_capture, tr("Start capture after setup"));
+        super::super::checkbox::checkbox(
+            ui,
+            &mut self.start_capture,
+            tr("Start capture after setup"),
+        );
     }
 }
 

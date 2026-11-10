@@ -10,7 +10,8 @@ impl Gavnel {
         });
         ui.add_space(16.0);
         section(ui, tr("Clip feedback"), |ui| {
-            ui.checkbox(
+            super::checkbox::checkbox(
+                ui,
                 &mut self.settings.clip_feedback.sound,
                 tr("Play a sound when I clip"),
             );
@@ -19,7 +20,8 @@ impl Gavnel {
                 super::widgets::slider(ui, &mut self.settings.clip_feedback.volume, 0.0..=1.0, "%");
             });
             ui.add_space(8.0);
-            ui.checkbox(
+            super::checkbox::checkbox(
+                ui,
                 &mut self.settings.clip_feedback.notification,
                 tr("Show a clip notification"),
             );

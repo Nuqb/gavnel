@@ -88,9 +88,9 @@ impl Gavnel {
                     egui::Button::new(format!(
                         "{}  ·  {}",
                         if self.settings.long_recording_hotkey.is_empty() {
-                            tr("Not set")
+                            tr("Not set").to_owned()
                         } else {
-                            &self.settings.long_recording_hotkey
+                            crate::key_labels::display(&self.settings.long_recording_hotkey)
                         },
                         if status.full_recording {
                             tr("Stop & save")

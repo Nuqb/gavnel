@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Shared onboarding-style checkboxes and radio buttons, refined recording options, and more compact settings panels.
+- Cleaner library search and settings, a dedicated custom game dialog, and animated toggles.
+- Passive shortcut handling and familiar punctuation labels.
+- Improved source launcher feedback and optional quick launch of the latest completed build.
+- Installed builds always check for updates automatically.
 ## 0.3.0
 
 - First downloadable Windows x64 installer, with per-user installation and an uninstaller.

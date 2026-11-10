@@ -12,6 +12,8 @@ mod export;
 mod feedback;
 mod i18n;
 mod icons;
+mod key_labels;
+mod keyboard;
 mod library;
 mod microphone;
 mod motion_test;

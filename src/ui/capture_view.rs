@@ -130,7 +130,7 @@ impl Gavnel {
                             } else {
                                 tr("Save clip")
                             },
-                            self.settings.hotkey
+                            crate::key_labels::display(&self.settings.hotkey)
                         )),
                     )
                     .clicked()

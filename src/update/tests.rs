@@ -93,13 +93,15 @@ fn only_installed_releases_can_replace_app_files() {
 }
 
 #[test]
-fn new_update_setting_migrates_and_does_not_restart_capture() {
+fn obsolete_update_preference_is_ignored() {
     let old: crate::config::Settings = serde_json::from_str("{}").unwrap();
-    assert!(old.check_for_updates);
-    let mut changed = old.clone();
-    changed.check_for_updates = false;
-    assert!(!changed.recording_changed(&old));
     let restored: crate::config::Settings =
-        serde_json::from_str(&serde_json::to_string(&changed).unwrap()).unwrap();
-    assert!(!restored.check_for_updates);
+        serde_json::from_str(r#"{"check_for_updates":false}"#).unwrap();
+    assert_eq!(old, restored);
+    assert!(
+        serde_json::to_value(&restored)
+            .unwrap()
+            .get("check_for_updates")
+            .is_none()
+    );
 }

@@ -109,3 +109,7 @@ Then, for each file (or set of related files) evaluated, provide:
 4. **Suggested file structure**: How the current file(s) could be split or where new modules should live (e.g. "Page: `app/[lang]/profile/page.tsx` (thin), data: `lib/db/profile.ts`, validation: `lib/validators/profile.ts`"). Base paths on the project's existing conventions and detected stack.
 
 Keep the report scannable: use headings, bullets, and tables where helpful. Prefer specific file paths and function names over vague advice.
+
+## Gavnel UI convention
+
+Use the shared controls in src/ui/checkbox.rs for all checkboxes and checked-state indicators. They preserve the onboarding design, keyboard interaction, and accessible state. Do not use egui's default checkbox, Unicode checkmark labels, or duplicate tick drawing code for new UI.

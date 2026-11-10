@@ -124,7 +124,6 @@ impl NoiseSuppression {
 #[serde(default)]
 pub struct Settings {
     pub onboarding_completed: bool,
-    pub check_for_updates: bool,
     pub language: crate::i18n::Language,
     /// None preserves startup behavior for preferences saved before this field existed.
     pub capture_enabled: Option<bool>,
@@ -177,7 +176,6 @@ impl Default for Settings {
             .unwrap_or_else(|| PathBuf::from("."));
         Self {
             onboarding_completed: false,
-            check_for_updates: true,
             language: crate::i18n::Language::default(),
             capture_enabled: None,
             library_compact: false,
