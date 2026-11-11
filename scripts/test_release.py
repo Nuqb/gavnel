@@ -76,8 +76,24 @@ class ReleaseTests(unittest.TestCase):
             release.check_release_available(self.tag)
 
     def test_older_version_cannot_become_latest(self):
-        with patch.object(release, "api", side_effect=[None, {"tag_name": "v1.3.0"}]), self.assertRaisesRegex(ValueError, "newer"):
+        with patch.object(release, "release_info", return_value=None), patch.object(release, "api", return_value={"tag_name": "v1.3.0"}), self.assertRaisesRegex(ValueError, "newer"):
             release.check_release_available(self.tag)
+
+    def test_draft_lookup_falls_back_to_paginated_authenticated_listing(self):
+        draft = {"tag_name": self.tag, "draft": True, "assets": []}
+        pages = '[[{"tag_name":"v1.2.4"}], [{"tag_name":"v1.2.3","draft":true,"assets":[]}]]'
+        with patch.object(release, "api", return_value=None), patch.object(release, "gh", return_value=pages):
+            self.assertEqual(release.release_info(self.tag), draft)
+
+    def test_published_lookup_does_not_need_release_listing(self):
+        published = self.draft(draft=False)
+        with patch.object(release, "api", return_value=published), patch.object(release, "gh") as gh:
+            self.assertEqual(release.release_info(self.tag), published)
+        gh.assert_not_called()
+
+    def test_absent_tag_is_not_confused_with_another_draft(self):
+        with patch.object(release, "api", return_value=None), patch.object(release, "gh", return_value='[[{"tag_name":"v1.2.4","draft":true}]]'):
+            self.assertIsNone(release.release_info(self.tag))
 
     def test_mismatched_tag_commit_fails_preflight(self):
         with patch.object(release, "run", side_effect=["tagged", "other"]), self.assertRaisesRegex(ValueError, "does not match"):

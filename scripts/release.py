@@ -40,6 +40,17 @@ def api(resource):
         raise
 
 
+def release_info(tag):
+    # GitHub's by-tag endpoint returns published releases only. Drafts must be
+    # found in the authenticated release listing, including later pages.
+    published = api(f"releases/tags/{tag}")
+    if published:
+        return published
+    pages = json.loads(gh("api", "--paginate", "--slurp",
+                          f"repos/{REPOSITORY}/releases?per_page=100"))
+    return next((item for page in pages for item in page if item["tag_name"] == tag), None)
+
+
 def version_tuple(tag):
     match = STABLE.fullmatch(tag)
     if not match:
@@ -67,7 +78,7 @@ def source_notes(tag):
 
 
 def check_release_available(tag, allow_published=False):
-    existing = api(f"releases/tags/{tag}")
+    existing = release_info(tag)
     if existing and not existing["draft"]:
         if allow_published:
             return
@@ -105,12 +116,12 @@ def verified_files(tag, directory):
 
 
 def stage_draft(tag, files, notes):
-    existing = api(f"releases/tags/{tag}")
+    existing = release_info(tag)
     if not existing:
         gh("release", "create", tag, "--repo", REPOSITORY, "--verify-tag", "--draft",
            "--target", run("git", "rev-parse", "HEAD"), "--title", f"Gavnel {tag}",
            "--notes-file", str(notes))
-        existing = api(f"releases/tags/{tag}")
+        existing = release_info(tag)
     if not existing or existing.get("prerelease"):
         raise ValueError("Expected a stable release draft.")
     if (existing.get("body") or "").strip() != notes.read_text(encoding="utf-8").strip():
@@ -127,7 +138,7 @@ def stage_draft(tag, files, notes):
 
 
 def verify_remote(tag, files):
-    release = api(f"releases/tags/{tag}")
+    release = release_info(tag)
     expected = {path.name for path in files}
     if not release or {asset["name"] for asset in release["assets"]} != expected:
         raise ValueError("The release asset list does not match the tested artifact.")

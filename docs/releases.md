@@ -25,7 +25,8 @@ fixes. Never move a released tag or replace published assets.
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Version X.Y.Z
 ```
 
-Prerequisites: Python 3.11+, Rust, Git, and GitHub CLI (`gh`). Run `gh auth login`
+Prerequisites: Python 3.11+, Rust, Git, and GitHub CLI (`gh` on PATH or the existing
+portable copy at `work/tools/gh/bin/gh.exe`). Run `gh auth login`
 once with permission to push this repository and view Actions. The command pushes
 `main`, waits for CI and its optimized build cache, creates and pushes the version
 tag, waits for Release, and prints the published URL. It never stages files,

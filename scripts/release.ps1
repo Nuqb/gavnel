@@ -5,13 +5,22 @@ param(
     [switch]$Resume
 )
 $ErrorActionPreference = 'Stop'
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$portableGh = Join-Path $projectRoot 'work/tools/gh/bin'
+$previousPath = $env:PATH
+if (-not (Get-Command gh -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $portableGh 'gh.exe'))) {
+    $env:PATH = $portableGh + [IO.Path]::PathSeparator + $env:PATH
+}
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     throw 'Install GitHub CLI (gh), then run gh auth login before releasing.'
 }
-Push-Location (Split-Path -Parent $PSScriptRoot)
+Push-Location $projectRoot
 try {
     $arguments = @('scripts/release.py', 'ship', '--tag', "v$Version")
     if ($Resume) { $arguments += '--resume' }
     & python @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Release did not complete. See the error above and docs/releases.md.' }
-} finally { Pop-Location }
+} finally {
+    Pop-Location
+    $env:PATH = $previousPath
+}
