@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+- Fixed missing screenshot sound and banner confirmations.
+- Added screenshot capture and save failure banners.
+- Clarified General settings with shared capture sound, banner, volume, and preview controls.
+
 ## 0.3.3
 
 - Added clip editing, project saving, and montage exports.

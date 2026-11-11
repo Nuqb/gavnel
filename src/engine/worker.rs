@@ -201,6 +201,10 @@ impl Worker {
             }
             Command::Screenshot(preferences) => {
                 if let Err(error) = self.screenshot(&preferences) {
+                    self.feedback(FeedbackEvent::ScreenshotFinished {
+                        source: String::new(),
+                        error: Some(format!("{error:#}")),
+                    });
                     self.message(format!("Screenshot failed: {error:#}"));
                 }
             }

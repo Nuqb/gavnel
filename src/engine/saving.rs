@@ -16,12 +16,9 @@ impl SaveQueue {
             .name("gavnel-clip-writer".into())
             .spawn(move || {
                 for job in receiver {
-                    let (result, id) = save(job);
-                    if let (Some(feedback), Some(id)) = (&feedback, id) {
-                        feedback.send(FeedbackEvent::Finished {
-                            id,
-                            success: result.is_ok(),
-                        });
+                    let (result, event) = save(job);
+                    if let Some(feedback) = &feedback {
+                        feedback.send(event);
                     }
                     count.fetch_sub(1, Ordering::AcqRel);
                     let mut state = status.lock().unwrap();
@@ -70,38 +67,72 @@ impl SaveQueue {
     }
 }
 
-fn save(job: SaveJob) -> (Result<PathBuf>, Option<u64>) {
+fn save(job: SaveJob) -> (Result<PathBuf>, FeedbackEvent) {
     match job {
         SaveJob::Clip {
             id,
             snapshot,
             folder,
             events,
-        } => (
-            write_clip(&snapshot, &folder).and_then(|path| {
+        } => {
+            let result = write_clip(&snapshot, &folder).and_then(|path| {
                 crate::highlights::save_events(&path, &events)?;
                 for event in &events {
                     crate::bookmarks::append(&path, event.ticks as f64 / TICKS as f64)?;
                 }
                 Ok(path)
-            }),
-            Some(id),
-        ),
+            });
+            let event = FeedbackEvent::Finished {
+                id,
+                success: result.is_ok(),
+            };
+            (result, event)
+        }
         SaveJob::Screenshot {
             image,
             folder,
             source,
             limit,
-        } => (
-            crate::screenshot::save(&image, &folder, &source, limit),
-            None,
-        ),
+        } => {
+            let result = crate::screenshot::save(&image, &folder, &source, limit);
+            let event = FeedbackEvent::ScreenshotFinished {
+                source,
+                error: result.as_ref().err().map(|error| format!("{error:#}")),
+            };
+            (result, event)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn screenshot_feedback_reports_the_actual_save_result() {
+        let folder = tempfile::tempdir().unwrap();
+        for valid in [true, false] {
+            let (result, event) = save(SaveJob::Screenshot {
+                image: crate::screenshot::Screenshot {
+                    width: 1,
+                    height: 1,
+                    rgba: if valid { vec![255; 4] } else { Vec::new() },
+                },
+                folder: folder.path().to_owned(),
+                source: "Desktop".into(),
+                limit: None,
+            });
+            assert_eq!(result.is_ok(), valid);
+            let FeedbackEvent::ScreenshotFinished { source, error } = event else {
+                panic!("Screenshot saves must send screenshot feedback");
+            };
+            assert_eq!(source, "Desktop");
+            assert_eq!(error.is_none(), valid);
+            if let Some(error) = error {
+                assert!(error.contains("Invalid screenshot pixels"));
+            }
+        }
+    }
 
     #[test]
     fn normal_shutdown_drains_saves_and_reports_success_or_failure() {

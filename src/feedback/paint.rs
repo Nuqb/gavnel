@@ -46,7 +46,10 @@ unsafe fn draw_localized(dc: HDC, scale: f32, toast: &Toast) {
                 y: px(37),
             },
         ];
-        if toast.title == "Couldn't save clip" || toast.title == "Clip not captured" {
+        if matches!(
+            toast.title.as_str(),
+            "Couldn't save clip" | "Clip not captured" | "Screenshot failed"
+        ) {
             let stem = [
                 POINT {
                     x: px(39),

@@ -32,17 +32,17 @@ impl Wizard {
                 );
             });
         });
-        controls::group(ui, tr("Clip feedback"), |ui| {
+        controls::group(ui, tr("Capture feedback"), |ui| {
             ui.columns(2, |columns| {
                 super::super::checkbox::checkbox(
                     &mut columns[0],
                     &mut self.draft.clip_feedback.notification,
-                    tr("Notification"),
+                    tr("Show banner"),
                 );
                 super::super::checkbox::checkbox(
                     &mut columns[1],
                     &mut self.draft.clip_feedback.sound,
-                    tr("Sound"),
+                    tr("Play sound"),
                 );
             });
         });

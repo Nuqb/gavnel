@@ -9,12 +9,8 @@ impl Gavnel {
             super::language::selector(ui, &mut self.settings.language, "settings-language");
         });
         ui.add_space(16.0);
-        section(ui, tr("Clip feedback"), |ui| {
-            super::checkbox::checkbox(
-                ui,
-                &mut self.settings.clip_feedback.sound,
-                tr("Play a sound when I clip"),
-            );
+        section(ui, tr("Capture feedback"), |ui| {
+            super::checkbox::checkbox(ui, &mut self.settings.clip_feedback.sound, tr("Play sound"));
             ui.add_enabled_ui(self.settings.clip_feedback.sound, |ui| {
                 ui.label(RichText::new(tr("Sound volume")).size(12.0).color(MUTED));
                 super::widgets::slider(ui, &mut self.settings.clip_feedback.volume, 0.0..=1.0, "%");
@@ -23,14 +19,13 @@ impl Gavnel {
             super::checkbox::checkbox(
                 ui,
                 &mut self.settings.clip_feedback.notification,
-                tr("Show a clip notification"),
+                tr("Show banner"),
             );
-            ui.label(RichText::new(tr("A small confirmation fades away after 3 seconds. Your game keeps focus and clicks pass through.")).size(12.0).color(MUTED));
             ui.add_space(10.0);
             if ui
                 .add_enabled(
                     self.settings.clip_feedback.sound || self.settings.clip_feedback.notification,
-                    egui::Button::new(tr("Preview clip feedback")),
+                    egui::Button::new(tr("Preview feedback")),
                 )
                 .clicked()
             {

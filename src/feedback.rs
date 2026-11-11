@@ -50,6 +50,10 @@ pub enum Event {
         success: bool,
     },
     Failed(String),
+    ScreenshotFinished {
+        source: String,
+        error: Option<String>,
+    },
     Preview(ClipFeedback, crate::i18n::Language),
 }
 
@@ -135,6 +139,19 @@ struct Presentation {
     completed: VecDeque<(u64, bool)>,
 }
 impl Presentation {
+    fn screenshot_finished(&mut self, source: String, error: Option<String>, now: Instant) {
+        self.current = Some(Toast {
+            id: 0,
+            title: if error.is_some() {
+                "Screenshot failed"
+            } else {
+                "Screenshot saved"
+            }
+            .into(),
+            body: error.unwrap_or(source),
+            born: now,
+        });
+    }
     fn captured(&mut self, id: u64, source: String, seconds: f64, now: Instant) {
         let title = match self.completed.iter().find(|(i, _)| *i == id) {
             Some((_, true)) => "Clip saved",
@@ -278,6 +295,15 @@ impl State {
                         unsafe {
                             self.show(hwnd);
                         }
+                    }
+                }
+                Event::ScreenshotFinished { source, error } => {
+                    let mut preferences = self.preferences.clone();
+                    preferences.sound &= error.is_none();
+                    self.presentation
+                        .screenshot_finished(source, error, Instant::now());
+                    unsafe {
+                        self.present(hwnd, &preferences);
                     }
                 }
                 Event::Preview(preferences, language) => {
@@ -461,6 +487,29 @@ unsafe extern "system" fn window_proc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn screenshot_results_replace_previous_feedback_and_expire() {
+        let mut presentation = Presentation::default();
+        let now = Instant::now();
+        presentation.captured(42, "Game".into(), 60.0, now);
+        presentation.screenshot_finished("Desktop".into(), None, now);
+        let toast = presentation.current.as_ref().unwrap();
+        assert_eq!(toast.title, "Screenshot saved");
+        assert_eq!(toast.body, "Desktop");
+        presentation.finished(42, false);
+        assert_eq!(
+            presentation.current.as_ref().unwrap().title,
+            "Screenshot saved"
+        );
+        assert!(presentation.expired(now + LIFETIME));
+        let later = now + LIFETIME;
+        presentation.screenshot_finished("Desktop".into(), Some("Disk is full".into()), later);
+        let toast = presentation.current.as_ref().unwrap();
+        assert_eq!(toast.title, "Screenshot failed");
+        assert_eq!(toast.body, "Disk is full");
+        assert!(!presentation.expired(later));
+    }
+
     #[test]
     #[ignore = "writes an offscreen native notification preview; no displayed window or sound"]
     fn export_native_notification_preview() {
