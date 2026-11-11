@@ -293,6 +293,9 @@ pub(super) fn finish_recording(recording: &mut Option<Recording>, shared: &Mutex
             state.saved_count += 1;
         }
         Ok(None) => {}
-        Err(error) => shared.lock().unwrap().message = format!("Recording stopped: {error:#}"),
+        Err(error) => shared
+            .lock()
+            .unwrap()
+            .fail(format!("Recording stopped: {error:#}")),
     }
 }

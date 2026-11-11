@@ -430,13 +430,14 @@ mod popup_tests {
                             let response = super::motion::ComboBox::from_id_salt("microphone-test")
                                 .selected_text(tr("Off"))
                                 .show_ui(ui, |ui| {
-                                    state.option =
-                                        ui.selectable_value(&mut state.selected, 0, tr("Off")).rect;
-                                    ui.selectable_value(
-                                        &mut state.selected,
-                                        1,
-                                        tr("Windows default"),
-                                    );
+                                    ui.selectable_value(&mut state.selected, 0, tr("Off"));
+                                    state.option = ui
+                                        .selectable_value(
+                                            &mut state.selected,
+                                            1,
+                                            tr("Windows default"),
+                                        )
+                                        .rect;
                                 });
                             state.combo = response.response.rect;
                             state.combo_id = response.response.id;
@@ -492,6 +493,7 @@ mod popup_tests {
         let position = state.option.center();
         click(&ctx, &mut state, position);
         frame(&ctx, &mut state, vec![]);
+        assert_eq!(state.selected, 1, "The menu must apply the clicked option");
         assert!(
             state.open,
             "Choosing a microphone option closed the settings panel"

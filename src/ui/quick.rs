@@ -185,18 +185,7 @@ impl Gavnel {
         );
         ui.label(RichText::new(tr("Clip length")).size(12.0).color(MUTED));
         ui.horizontal(|ui| {
-            super::motion::ComboBox::from_id_salt("quick-duration")
-                .width(155.0)
-                .selected_text(format!("{} seconds", self.settings.replay_seconds))
-                .show_ui(ui, |ui| {
-                    for seconds in [15, 30, 60, 120] {
-                        ui.selectable_value(
-                            &mut self.settings.replay_seconds,
-                            seconds,
-                            format!("{seconds} seconds"),
-                        );
-                    }
-                });
+            super::clips_menu::duration_selector(ui, &mut self.settings, "quick-duration", 155.0);
         });
         ui.label(RichText::new(tr("Bitrate")).size(12.0).color(MUTED));
         let bitrate = super::widgets::slider(ui, &mut self.settings.bitrate_mbps, 5..=50, "Mbps");

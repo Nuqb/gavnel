@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::Path;
 
 mod compatibility;
-pub use compatibility::application_audio_supported;
+pub use compatibility::{application_audio_supported, capture_border_suppression_supported};
 
 const APP_INSTANCE: &str = "Local\\Gavnel.DesktopApp";
 const SHOW_EVENT: &str = "Local\\Gavnel.ShowWindow";

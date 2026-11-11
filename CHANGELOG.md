@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.8
+
+- Keep capture and clip-save errors visible in the main app with copy and dismiss controls, and retain the original capture failure when a clip is requested without active capture.
+- Use desktop duplication for Windows 10 monitor capture to avoid the system capture border. Window capture may still show the Windows 10 capture border.
+- Fix quick-settings clip lengths reverting during shortcut synchronization, and share duration selection with the toolbar clip menu.
+
 ## 0.3.7
 
 - Set installer publisher and executable company metadata to Software by Brox.

@@ -9,6 +9,22 @@ fn duration_label(seconds: u32) -> String {
     }
 }
 
+pub(super) fn duration_selector(ui: &mut egui::Ui, settings: &mut Settings, id: &str, width: f32) {
+    super::motion::ComboBox::from_id_salt(id)
+        .width(width)
+        .selected_text(duration_label(settings.replay_seconds))
+        .show_ui(ui, |ui| {
+            for seconds in [5, 10, 15, 30, 45, 60, 90, 120] {
+                if ui
+                    .selectable_label(settings.replay_seconds == seconds, duration_label(seconds))
+                    .clicked()
+                {
+                    settings.set_primary_clip_seconds(seconds);
+                }
+            }
+        });
+}
+
 pub(super) fn clip_button(
     ui: &mut egui::Ui,
     hotkey: &str,
@@ -192,22 +208,7 @@ impl Gavnel {
                         self.clips_capture_owned = true;
                     }
                     if !long_recording {
-                        super::motion::ComboBox::from_id_salt("clip-menu-duration")
-                            .width(126.0)
-                            .selected_text(duration_label(self.settings.replay_seconds))
-                            .show_ui(ui, |ui| {
-                                for seconds in [5, 10, 15, 30, 45, 60, 90, 120] {
-                                    if ui
-                                        .selectable_label(
-                                            self.settings.replay_seconds == seconds,
-                                            duration_label(seconds),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.settings.set_primary_clip_seconds(seconds);
-                                    }
-                                }
-                            });
+                        duration_selector(ui, &mut self.settings, "clip-menu-duration", 126.0);
                     }
                 });
                 if long_recording {
@@ -259,6 +260,10 @@ impl Gavnel {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "clip_duration_tests.rs"]
+mod duration_tests;
 
 #[cfg(test)]
 mod tests {

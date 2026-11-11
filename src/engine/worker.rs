@@ -34,7 +34,11 @@ pub(super) fn run(input: Inputs) {
     let feedback = match Feedback::new() {
         Ok(feedback) => Some(feedback),
         Err(error) => {
-            input.shared.lock().unwrap().message = format!("Clip feedback unavailable: {error:#}");
+            input
+                .shared
+                .lock()
+                .unwrap()
+                .fail(format!("Clip feedback unavailable: {error:#}"));
             None
         }
     };
@@ -73,7 +77,7 @@ impl Worker {
                     .and_then(|timer| timer.until(rec.last_tick));
                 if let Err(error) = result {
                     self.stop();
-                    self.message(format!("Capture timing failed: {error}"));
+                    self.capture_error(format!("Capture timing failed: {error}"));
                     continue;
                 }
             }
@@ -103,6 +107,19 @@ impl Worker {
         self.input.notify.wake();
     }
 
+    fn error(&self, message: String) {
+        self.input.shared.lock().unwrap().fail(message);
+        self.input.notify.wake();
+    }
+
+    fn capture_error(&self, message: String) {
+        let mut state = self.input.shared.lock().unwrap();
+        state.capture_error = Some(message.clone());
+        state.fail(message);
+        drop(state);
+        self.input.notify.wake();
+    }
+
     fn feedback(&self, event: FeedbackEvent) {
         if let Some(feedback) = &self.feedback {
             feedback.send(event);
@@ -113,7 +130,9 @@ impl Worker {
         self.flush_highlights(true);
         finish_recording(&mut self.recording, &self.input.shared);
         self.armed = false;
-        self.input.shared.lock().unwrap().armed = false;
+        let mut state = self.input.shared.lock().unwrap();
+        state.armed = false;
+        state.capture_error = None;
     }
 
     fn handle(&mut self, command: Command) {
@@ -205,7 +224,7 @@ impl Worker {
                         source: String::new(),
                         error: Some(format!("{error:#}")),
                     });
-                    self.message(format!("Screenshot failed: {error:#}"));
+                    self.error(format!("Screenshot failed: {error:#}"));
                 }
             }
             Command::Save | Command::SaveFor(_) | Command::Bookmark => {
@@ -215,8 +234,9 @@ impl Worker {
                     self.settings.replay_seconds
                 };
                 if let Err(error) = self.save_clip(seconds, matches!(command, Command::Bookmark)) {
-                    self.feedback(FeedbackEvent::Failed(error.to_string()));
-                    self.message(error.to_string());
+                    let reason = format!("{error:#}");
+                    self.feedback(FeedbackEvent::Failed(reason.clone()));
+                    self.error(reason);
                 }
             }
             Command::Shutdown => unreachable!("shutdown is handled by the event loop"),
@@ -234,7 +254,7 @@ impl Worker {
             .validate()
             .and_then(|()| crate::audio::validate_capture_settings(&settings))
         {
-            self.message(error.to_string());
+            self.error(format!("{error:#}"));
             return;
         }
         self.flush_highlights(true);
@@ -252,6 +272,7 @@ impl Worker {
         self.retry_after = Instant::now();
         let mut state = self.input.shared.lock().unwrap();
         state.armed = self.armed;
+        state.capture_error = None;
         state.recording = false;
         state.full_recording = self.armed && self.settings.recording_mode.full();
         state.elapsed = 0.0;
@@ -303,10 +324,15 @@ impl Worker {
     }
 
     fn save_clip(&mut self, seconds: u32, bookmark_only: bool) -> Result<()> {
-        let rec = self
-            .recording
-            .as_ref()
-            .context("No capture is active. Start capture first.")?;
+        let rec = self.recording.as_ref().with_context(|| {
+            self.input
+                .shared
+                .lock()
+                .unwrap()
+                .capture_error
+                .clone()
+                .unwrap_or_else(|| "No capture is active. Start capture first.".into())
+        })?;
         if let Some(session) = &rec.session {
             let seconds = session.bookmark(rec.clock.now())?;
             self.feedback(FeedbackEvent::Bookmarked {
@@ -401,13 +427,14 @@ impl Worker {
             ),
             Err(error) => {
                 self.retry_after = Instant::now() + Duration::from_secs(5);
-                self.message(format!("Capture could not start: {error:#}"));
+                self.capture_error(format!("Capture could not start: {error:#}"));
             }
         }
     }
 
     fn captured_source(&mut self, rec: Recording) {
         let mut state = self.input.shared.lock().unwrap();
+        state.capture_error = None;
         state.recording = true;
         state.full_recording = rec.session.is_some();
         state.source = rec.target.label();
@@ -445,7 +472,7 @@ impl Worker {
             Err(error) => {
                 self.finish_lost_source();
                 let previous = self.input.shared.lock().unwrap().message.clone();
-                self.message(format!("Capture interrupted: {error:#}. {previous}"));
+                self.capture_error(format!("Capture interrupted: {error:#}. {previous}"));
                 self.retry_after = Instant::now() + Duration::from_secs(2);
             }
             Ok(()) => {
@@ -554,6 +581,41 @@ mod tests {
         assert_eq!(worker.settings.recording_mode, RecordingMode::Clips);
         worker.handle(Command::Stop);
         assert!(!worker.input.shared.lock().unwrap().armed);
+        worker.saves.finish();
+    }
+
+    #[test]
+    fn capture_errors_survive_status_updates_and_explain_failed_clips() {
+        let mut worker = worker();
+        worker.capture_error("Capture could not start: NVIDIA session creation failed".into());
+        worker.message("Waiting for the selected window to open".into());
+        assert!(
+            worker
+                .input
+                .shared
+                .lock()
+                .unwrap()
+                .last_error
+                .as_ref()
+                .unwrap()
+                .contains("NVIDIA")
+        );
+        worker.handle(Command::Save);
+        let state = worker.input.shared.lock().unwrap();
+        assert!(state.message.contains("NVIDIA session creation failed"));
+        assert_eq!(state.last_error.as_ref(), Some(&state.message));
+        drop(state);
+        worker.handle(Command::Stop);
+        worker.handle(Command::Save);
+        assert!(
+            worker
+                .input
+                .shared
+                .lock()
+                .unwrap()
+                .message
+                .contains("No capture is active")
+        );
         worker.saves.finish();
     }
 

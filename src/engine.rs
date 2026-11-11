@@ -40,11 +40,19 @@ pub struct Status {
     pub fresh_fps: f64,
     pub saving: usize,
     pub message: String,
+    pub last_error: Option<String>,
+    pub capture_error: Option<String>,
     pub highlight_status: String,
     pub highlight_game: Option<crate::highlights::Game>,
     pub highlight_preview: Option<Arc<eframe::egui::ColorImage>>,
     pub last_clip: Option<PathBuf>,
     pub saved_count: u64,
+}
+impl Status {
+    pub fn fail(&mut self, message: String) {
+        self.last_error = Some(message.clone());
+        self.message = message;
+    }
 }
 pub enum Command {
     Start(Box<Settings>),

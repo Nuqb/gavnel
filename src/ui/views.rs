@@ -94,6 +94,21 @@ impl Gavnel {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(BG).inner_margin(28.0))
             .show(root, |ui| {
+                if let Some(error) = &status.last_error {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.colored_label(DANGER, error);
+                        if ui.small_button(tr("Copy")).clicked() {
+                            ui.ctx().copy_text(error.clone());
+                        }
+                        if ui.small_button(tr("Dismiss")).clicked() {
+                            let mut current = self.engine.status.lock().unwrap();
+                            if current.last_error.as_ref() == Some(error) {
+                                current.last_error = None;
+                            }
+                        }
+                    });
+                    ui.add_space(8.0);
+                }
                 if self.page != Page::Settings && !self.message.is_empty() {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(RichText::new(tr(&self.message)).color(ACCENT).size(12.0));

@@ -31,9 +31,7 @@ impl SaveQueue {
                             state.last_clip = Some(path);
                             state.saved_count += 1;
                         }
-                        Err(error) => {
-                            state.message = format!("Capture could not be saved: {error:#}")
-                        }
+                        Err(error) => state.fail(format!("Capture could not be saved: {error:#}")),
                     }
                     state.saving = count.load(Ordering::Relaxed);
                     drop(state);
@@ -171,6 +169,7 @@ mod tests {
                 assert!(state.last_clip.as_ref().unwrap().is_file());
             } else {
                 assert!(state.message.contains("could not be saved"));
+                assert_eq!(state.last_error.as_ref(), Some(&state.message));
                 assert!(state.last_clip.is_none());
             }
         }

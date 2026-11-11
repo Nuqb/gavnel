@@ -67,7 +67,8 @@ each OS with an SDR display and a supported NVIDIA GPU/driver:
 - Exercise playback, seeking, fullscreen, trims, and native H.264/AAC exports.
 - Exercise global shortcuts, tray restore, close-to-tray, and graceful updates.
 
-Windows 10 may display the system capture border. Border suppression, capture
+Windows 10 monitor capture uses desktop duplication to avoid the system capture
+border. Individual-window capture may still display that border. Border suppression, capture
 update-interval tuning, and Windows 11 window styling are optional; unavailable
 properties must not prevent recording or playback. Process-filtered audio needs
 build 20348 or newer, which standard Windows 10 desktop releases do not provide

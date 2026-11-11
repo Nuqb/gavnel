@@ -387,9 +387,13 @@ pub enum CaptureSource {
 }
 impl CaptureSource {
     pub fn new(target: &Target, force_dxgi: bool) -> Result<Self> {
-        if force_dxgi || target.fullscreen() {
+        if force_dxgi
+            || target.fullscreen()
+            || (matches!(target, Target::Monitor(_))
+                && !crate::platform::capture_border_suppression_supported())
+        {
             return Self::dxgi(target).context(
-                "Fullscreen capture failed. Check your display connection and NVIDIA driver.",
+                "Desktop capture failed. Check your display connection and graphics driver.",
             );
         }
         WgcSource::new(target).map(Self::Wgc).or_else(|original| {

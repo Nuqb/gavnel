@@ -13,6 +13,11 @@ pub fn application_audio_supported() -> bool {
     *SUPPORTED.get_or_init(|| windows_build().is_some_and(process_loopback_supported))
 }
 
+pub fn capture_border_suppression_supported() -> bool {
+    // Border suppression and process loopback both arrived at build 20348.
+    application_audio_supported()
+}
+
 fn process_loopback_supported(build: u32) -> bool {
     // Process-filtered WASAPI loopback starts at build 20348. Windows 10
     // desktop releases, including 22H2 (19045), do not provide it.
