@@ -1,6 +1,6 @@
 # Building and publishing releases
 
-Gavnel releases target Windows 11 x64. The per-user installer writes to `%LOCALAPPDATA%\Programs\Gavnel` by default and includes the dependency inventory, license notices, and an uninstaller. Settings and recordings are stored separately and survive updates and uninstalling.
+Gavnel releases target Windows 10 22H2 (build 19045) and Windows 11 x64. Game-only and selected-app audio require Windows 11; Windows 10 uses PC audio or selected playback devices, plus microphone capture. The per-user installer writes to `%LOCALAPPDATA%\Programs\Gavnel` by default and includes the dependency inventory, license notices, and an uninstaller. Settings and recordings are stored separately and survive updates and uninstalling.
 
 ## Meaning of "push an update"
 

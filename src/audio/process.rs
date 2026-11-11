@@ -94,6 +94,10 @@ impl IActivateAudioInterfaceCompletionHandler_Impl for Activation_Impl {
 }
 impl Endpoint {
     pub(super) fn open_process(pid: u32) -> Result<Self> {
+        anyhow::ensure!(
+            crate::platform::application_audio_supported(),
+            "Application audio capture requires Windows 11."
+        );
         unsafe {
             let mut params = AUDIOCLIENT_ACTIVATION_PARAMS {
                 ActivationType: AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,

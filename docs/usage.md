@@ -86,7 +86,7 @@ Settings are shared between app versions in `%APPDATA%\Gavnel\Gavnel\config`. Th
 
 ## Current capture limits
 
-- Windows 11 x64, SDR, and a compatible NVIDIA GPU/driver are the current recording target. Live recording has no CPU, AMD, or Intel video-encoding fallback.
+- Windows 10 22H2 (build 19045) and Windows 11 x64, SDR, and a compatible NVIDIA GPU/driver are the current recording targets. Live recording has no CPU, AMD, or Intel video-encoding fallback. Windows 10 supports PC audio, selected playback devices, and microphone capture; game-only and selected-app audio require Windows 11.
 - One source is captured at a time. A single replay export can be active with one more queued.
 - The retained compressed-packet budget is 512 MiB; total RAM and GPU memory can be higher.
 - Game/window capture becomes black when its target loses focus; audio continues. A monitor source captures everything visible on that display.

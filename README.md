@@ -14,7 +14,9 @@
 
 ## Install
 
-**Windows 11 x64 · NVIDIA GPU with NVENC · SDR display**
+**Windows 10 22H2 / Windows 11 x64 · NVIDIA GPU with NVENC · SDR display**
+
+Windows 10 supports PC audio and microphone capture. Game-only and selected-app audio require Windows 11. Windows 10 recording validation is pending; see [compatibility checks](docs/development.md#windows-compatibility-checks).
 
 1. [**Download the Windows installer**](https://github.com/Nuqb/gavnel/releases/latest) (`Gavnel-Setup-VERSION-x64.exe`).
 2. Open it and follow setup.

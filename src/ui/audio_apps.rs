@@ -18,7 +18,18 @@ impl Gavnel {
                 .selected_text(tr(modes.iter().find(|(m, _)| *m == current).unwrap().1))
                 .show_ui(ui, |ui| {
                     for (mode, label) in modes {
-                        if ui.selectable_label(mode == current, tr(label)).clicked() {
+                        let enabled = !matches!(
+                            mode,
+                            AudioCaptureMode::GameOnly | AudioCaptureMode::SelectedApps
+                        ) || crate::platform::application_audio_supported();
+                        if ui
+                            .add_enabled(
+                                enabled,
+                                egui::Button::selectable(mode == current, tr(label)),
+                            )
+                            .on_disabled_hover_text(tr("Requires Windows 11"))
+                            .clicked()
+                        {
                             self.settings.audio_capture_mode = Some(mode);
                         }
                     }

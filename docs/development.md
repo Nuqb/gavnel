@@ -15,7 +15,7 @@ Prepare the version and notes, commit on `main`, then use
 
 - Stable Rust with the `x86_64-pc-windows-msvc` toolchain.
 - Visual Studio C++ Build Tools and the Windows SDK.
-- Windows 11 x64, an SDR source, and an NVIDIA GPU with a compatible NVENC driver for live recording.
+- Windows 10 22H2 (build 19045) or Windows 11 x64, an SDR source, and an NVIDIA GPU with a compatible NVENC driver for live recording.
 
 Building dependencies may require internet access. Running the recorder does not require a login or internet connection. NVENC loads from the installed NVIDIA driver. The editor uses Windows Media Foundation; building and launching Gavnel does not download an external media runtime.
 
@@ -45,6 +45,33 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -BuildOnl
 ```
 
 Run `cargo fmt` after code edits. The build-only launcher checks the runnable release build without opening the app. Some graphics and visual-export tests are opt-in; read their descriptions before running them.
+
+## Windows compatibility checks
+
+The installer accepts Windows 10 22H2 x64 (build 19045) and Windows 11 x64.
+Windows 10 live validation is pending; a build or CI run on Windows Server does
+not establish recording compatibility on either desktop OS.
+
+Before claiming a release is validated on both systems, run these checks on
+each OS with an SDR display and a supported NVIDIA GPU/driver:
+
+- Install, launch, upgrade, and uninstall using the release installer.
+- Record a monitor and a window, save a replay, and take a screenshot.
+- Record all PC audio, selected playback devices, and the microphone; verify
+  playback and separate audio tracks.
+- On Windows 10, confirm Game only and Selected apps are disabled. Import
+  settings requesting either mode and confirm recording reports an error with
+  the supported alternatives, without replacing an active recording or silently
+  capturing other applications' audio.
+- On Windows 11, verify game-only and selected-app audio still isolate audio.
+- Exercise playback, seeking, fullscreen, trims, and native H.264/AAC exports.
+- Exercise global shortcuts, tray restore, close-to-tray, and graceful updates.
+
+Windows 10 may display the system capture border. Border suppression, capture
+update-interval tuning, and Windows 11 window styling are optional; unavailable
+properties must not prevent recording or playback. Process-filtered audio needs
+build 20348 or newer, which standard Windows 10 desktop releases do not provide
+([Microsoft API requirements](https://learn.microsoft.com/en-us/windows/win32/api/audioclientactivationparams/ns-audioclientactivationparams-audioclient_process_loopback_params)).
 
 ## Source map
 

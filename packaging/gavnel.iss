@@ -11,7 +11,7 @@
 AppId={{6E542AC8-09FB-4613-9CA3-032F0B5EEAF1}
 AppName=Gavnel
 AppVersion={#AppVersion}
-AppPublisher=Nuqb
+AppPublisher=Software by Brox
 AppPublisherURL=https://github.com/Nuqb/gavnel
 AppSupportURL=https://github.com/Nuqb/gavnel/issues
 AppUpdatesURL=https://github.com/Nuqb/gavnel/releases
@@ -22,7 +22,7 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-MinVersion=10.0.22000
+MinVersion=10.0.19045
 AppMutex=Local\Gavnel.DesktopApp
 CloseApplications=no
 RestartApplications=no

@@ -132,12 +132,24 @@ pub struct AudioWorker {
     stop: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
 }
+
+pub(crate) fn validate_capture_settings(settings: &Settings) -> Result<()> {
+    anyhow::ensure!(
+        !settings.desktop_audio
+            || !settings.application_audio()
+            || crate::platform::application_audio_supported(),
+        "Game-only and selected-app audio require Windows 11. Choose All PC audio or Selected playback devices."
+    );
+    Ok(())
+}
+
 impl AudioWorker {
     pub fn start(
         settings: Settings,
         clock: Clock,
         output: crate::replay::EncoderOutput,
     ) -> Result<Self> {
+        validate_capture_settings(&settings)?;
         let stop = Arc::new(AtomicBool::new(false));
         let signal = stop.clone();
         let warnings = output.messages.clone();

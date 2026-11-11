@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.7
+
+- Set installer publisher and executable company metadata to Software by Brox.
+- Lowered the installer minimum to Windows 10 22H2 while retaining Windows 11 support. Disabled unsupported application-audio modes on Windows 10 and reject imported settings that request them before replacing an active recording. Windows 10 live validation is pending.
+
 ## 0.3.6
 
 - Integrated minimize, maximize/restore, and close buttons into the app, with draggable header space, double-click maximize/restore, and edge resizing.

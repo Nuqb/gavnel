@@ -230,7 +230,10 @@ impl Worker {
             self.message("Recording is off. Choose a recording mode in Settings.".into());
             return;
         }
-        if let Err(error) = settings.validate() {
+        if let Err(error) = settings
+            .validate()
+            .and_then(|()| crate::audio::validate_capture_settings(&settings))
+        {
             self.message(error.to_string());
             return;
         }

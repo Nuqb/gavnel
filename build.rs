@@ -4,6 +4,7 @@ fn main() {
         winresource::WindowsResource::new()
             .set_icon("assets/gavnel.ico")
             .set("ProductName", "Gavnel")
+            .set("CompanyName", "Software by Brox")
             .set("FileDescription", "Gavnel Gameplay Clipper")
             .compile()
             .expect("Could not embed Gavnel's Windows icon");
