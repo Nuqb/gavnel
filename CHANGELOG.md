@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Adopted source-available terms for new Gavnel material: free app use and private builds, with written permission required for redistribution, resale, rebranding, and code reuse in other products.
+- Preserved existing MIT permissions for previously released material, third-party licenses, and unrestricted use of users' recordings and screenshots.
+- Updated Cargo metadata and installer packaging to include the current license and historical MIT text.
+
 ## 0.3.4
 
 - Fixed missing screenshot sound and banner confirmations.

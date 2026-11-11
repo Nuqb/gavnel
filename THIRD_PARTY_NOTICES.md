@@ -2,6 +2,8 @@
 
 Gavnel uses open-source Rust libraries. Exact versions and checksums are recorded in Cargo.lock. The distribution's `licenses` directory contains license and notice files from the dependencies selected for Windows x64.
 
+Gavnel's own source-available terms in `LICENSE` do not replace or restrict these third-party licenses. Third-party source, libraries, tools, and fonts retain the permissions granted by their respective rights holders, including redistribution and modification where allowed. Previously MIT-licensed Gavnel material also retains its existing permissions; see `HISTORICAL-MIT.txt` for the historical text.
+
 Principal dependencies:
 
 - nnnoiseless / RNNoise — BSD-3-Clause; neural microphone noise reduction — https://github.com/jneem/nnnoiseless

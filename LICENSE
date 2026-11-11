@@ -1,21 +1,106 @@
-MIT License
+Gavnel Source-Available License
+Version 1.0 - November 11, 2026
 
-Copyright (c) 2026 Gavnel contributors
+Copyright (c) 2026 Gavnel contributors. All rights reserved except as
+expressly granted below or under an applicable separate license.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Scope and earlier licenses
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This license covers the Gavnel application, source code, documentation, and
+original project assets supplied with it (the "Software"), only to the
+extent the applicable copyright holders have authority to grant these terms.
+Third-party components and material already licensed separately are subject
+to section 5.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+These terms apply to new Gavnel material first distributed under this
+license. They do not revoke, replace, or narrow permissions previously
+granted under MIT or another license. Previously MIT-licensed source code
+and binaries, including the existing release tags v0.3.0 through v0.3.4,
+remain available under their original terms. Previously MIT-licensed
+portions remain usable under MIT even when included in a later version.
+The historical MIT license text is preserved in HISTORICAL-MIT.txt.
+
+2. Free use and private development
+
+Subject to this license, you may, without charge:
+
+- Download, install, run, and make backup copies of Gavnel for your own
+  personal or internal business use.
+- Inspect the source code, compile Gavnel, and privately modify Gavnel
+  solely for your own personal or internal business use of Gavnel.
+- Use Gavnel to create, edit, publish, share, and monetize recordings,
+  screenshots, streams, and other output, subject to any rights in the
+  content you capture.
+- Share links to the official project and downloads.
+
+These permissions are nonexclusive and do not include a right to
+sublicense the Software. Retain applicable copyright and license notices
+in copies you make.
+
+3. Uses requiring written permission
+
+Except as allowed in sections 1, 2, or 5, or required by applicable law,
+you must obtain prior written permission from the applicable copyright
+holders or their authorized representative before you:
+
+- Redistribute, publish, mirror, sublicense, rent, or sell copies of the
+  Software, source code, installers, or compiled binaries, whether
+  modified or unmodified, free of charge or for payment.
+- Rebrand or distribute a derivative version of Gavnel.
+- Copy, extract, or incorporate Gavnel code or original project assets
+  into another product or service.
+- Provide Gavnel itself to third parties as a hosted or managed service.
+
+Running Gavnel for your own work, including monetized content creation,
+does not by itself require additional permission. These restrictions do
+not apply to your recordings, screenshots, streams, or other output.
+All rights not expressly granted are reserved.
+
+Permission requests may be directed to the project maintainer, Nuqb,
+through https://github.com/Nuqb/gavnel. Additional permission must come
+from a rights holder or someone authorized to grant it.
+
+4. Your content
+
+This license grants the Gavnel copyright holders no ownership of, or
+license to, your recordings, screenshots, audio, project files, or other
+content. You retain whatever rights you otherwise have in that content.
+You do not need permission from the Gavnel copyright holders to share
+or sell your output merely because you created it using Gavnel.
+
+5. Third-party components and other preserved rights
+
+Third-party libraries, fonts, tools, and other components retain their
+own licenses and notices. See THIRD_PARTY_NOTICES.md, source-file notices,
+and the accompanying license files. This license does not restrict any
+rights granted by those licenses, including rights to copy, modify,
+redistribute, replace, or debug those components. Where these terms
+conflict with a third-party component's license, that component's
+license governs that component.
+
+Nothing here limits rights that cannot be restricted under applicable
+law or permissions granted by a separate applicable license. Hosting
+this source in a public GitHub repository also preserves permissions
+granted under GitHub's Terms of Service, including viewing and forking
+through GitHub's functionality. Those hosting permissions do not grant
+additional rights to sell or redistribute the Software outside their
+scope. This is a source-available license, not an open-source license.
+
+6. Termination
+
+The permissions granted by this license terminate if you violate its
+terms. Upon termination, stop exercising those permissions and remove
+copies held solely under this license. Termination does not affect your
+content or rights independently granted under earlier licenses,
+third-party licenses, applicable law, or applicable hosting terms.
+
+7. Disclaimer and limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.

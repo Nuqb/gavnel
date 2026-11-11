@@ -30,7 +30,7 @@ try {
     if ($process.ExitCode -ne 0 -or $reported -ne "Gavnel $version") { throw 'The built executable has the wrong version.' }
     New-Item -ItemType Directory -Force $payload | Out-Null
     Copy-Item -LiteralPath $binary -Destination (Join-Path $payload 'Gavnel.exe')
-    foreach ($name in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','CHANGELOG.md')) { Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $payload }
+    foreach ($name in @('LICENSE','HISTORICAL-MIT.txt','THIRD_PARTY_NOTICES.md','README.md','CHANGELOG.md')) { Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $payload }
     Copy-Item -LiteralPath 'packaging/gavnel-install.txt' -Destination $payload
     python scripts/get-media.py --copy-to (Join-Path $payload 'media')
     if ($LASTEXITCODE -ne 0) { throw 'Editing runtime verification failed.' }

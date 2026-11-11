@@ -117,7 +117,11 @@ The following commands **make new recordings**. Choose an appropriate local outp
 
 ## License
 
-Gavnel is [MIT licensed](../LICENSE). See [third-party notices](../THIRD_PARTY_NOTICES.md) for bundled dependency licenses.
+Gavnel uses a [source-available license](../LICENSE). You may inspect, build, and privately modify Gavnel for your own personal or internal business use. Redistribution, resale, rebranding, and reuse of its code or original assets in other products require prior written permission. Use of Gavnel for monetized content is allowed, and the license does not restrict your recordings or screenshots.
+
+The license change applies to new material first distributed under the new terms. Previously MIT-licensed portions and existing release tags through v0.3.4 retain their MIT permissions; the original text is preserved in [HISTORICAL-MIT.txt](../HISTORICAL-MIT.txt). Public GitHub viewing and forking permissions and applicable legal exceptions are preserved. [Third-party components](../THIRD_PARTY_NOTICES.md) retain their own licenses.
+
+Cargo points to the custom license file and disables registry publishing. Release packaging includes both the current license and the historical MIT text; the installer displays the current license. Before publishing under these terms, have the license reviewed by qualified legal counsel and verify authority to license any newly contributed material.
 
 ## Localization
 

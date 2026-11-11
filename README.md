@@ -64,4 +64,8 @@ Replay retention has a **512 MiB compressed-packet budget**, not a cap on total 
 - [Game detection](docs/game-detection.md)
 - [Localization](docs/localization.md)
 
-[MIT License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+## License
+
+Gavnel is [source-available and free to use](LICENSE), including for monetized videos and streams. Private builds and modifications for your own use are allowed. Redistribution, resale, rebranding, and reuse of Gavnel code or original assets in other products require prior written permission. These restrictions do not apply to your recordings or screenshots.
+
+Earlier MIT-licensed code and releases, including v0.3.4 and earlier release tags, retain their original permissions; see [the historical MIT license](HISTORICAL-MIT.txt). [Third-party components](THIRD_PARTY_NOTICES.md) retain their own licenses. Public GitHub viewing and forking remain subject to GitHub's terms. See the full [license](LICENSE) for scope and exceptions.
