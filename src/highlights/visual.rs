@@ -147,7 +147,7 @@ mod tests {
 mod integration {
     use super::*;
     #[test]
-    #[ignore = "requires Windows English OCR and the bundled editing runtime; synthetic image only"]
+    #[ignore = "requires Windows English OCR and optional work/media reference tools; synthetic image only"]
     fn windows_ocr_recognizes_synthetic_highlight() {
         unsafe {
             windows::Win32::System::WinRT::RoInitialize(
@@ -155,8 +155,7 @@ mod integration {
             )
             .unwrap();
         }
-        let tools = crate::media::Tools::locate().unwrap();
-        let output = tools.command(false).args(["-v","error","-f","lavfi","-i","color=c=black:size=1000x200:duration=1","-vf","drawtext=fontfile='C\\:/Windows/Fonts/segoeuib.ttf':text='VICTORY ROYALE':fontsize=70:fontcolor=white:x=30:y=60","-frames:v","1","-f","rawvideo","-pix_fmt","rgba","pipe:1"]).output().unwrap();
+        let output = crate::media::tests::reference_command().args(["-v","error","-f","lavfi","-i","color=c=black:size=1000x200:duration=1","-vf","drawtext=fontfile='C\\:/Windows/Fonts/segoeuib.ttf':text='VICTORY ROYALE':fontsize=70:fontcolor=white:x=30:y=60","-frames:v","1","-f","rawvideo","-pix_fmt","rgba","pipe:1"]).output().unwrap();
         assert!(
             output.status.success(),
             "{}",

@@ -5,62 +5,54 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag to package (vX.Y.Z)
+        description: Existing stable version tag (vX.Y.Z)
         required: true
         type: string
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 jobs:
   windows-installer:
     runs-on: windows-2025
     timeout-minutes: 45
-    env:
-      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate tag
-        shell: pwsh
+      - name: Validate release before building
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Use a stable vX.Y.Z tag.' }
-          git rev-parse --verify "refs/tags/$env:RELEASE_TAG"
-          if ($LASTEXITCODE -ne 0) { throw 'Release tag does not exist.' }
-      - name: Restore Rust dependencies
-        id: cargo-cache
-        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+          python scripts/release.py preflight --tag $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: ./.github/actions/rust
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug
-            target/.rustc_info.json
-          key: ${{ runner.os }}-rust-1.95-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-rust-1.95-${{ hashFiles('Cargo.lock') }}-
-      - name: Install Rust
-        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
-      - name: Select Rust
-        run: rustup override set 1.95.0
+          profile: checks
       - name: Verify source
         shell: pwsh
-        run: |
-          cargo fmt --check
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --locked
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo clippy --locked --all-targets -- -D warnings
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python scripts/check-locales.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: ./scripts/check.ps1
+      - uses: ./.github/actions/rust
+        with:
+          profile: distribution
       - name: Build installer and notices
         shell: pwsh
         run: ./scripts/package-release.ps1 -ExpectedVersion $env:RELEASE_TAG.Substring(1)
+      - name: Verify installed native editor
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          ./scripts/test-native-installer.ps1 -Installer "work/releases/$env:RELEASE_TAG/Gavnel-Setup-$version-x64.exe"
       - name: Verify installer update and uninstall
         shell: pwsh
         run: |
@@ -68,24 +60,37 @@ jobs:
           $env:GAVNEL_TEST_INSTALLER = Join-Path $env:GITHUB_WORKSPACE "work/releases/$env:RELEASE_TAG/Gavnel-Setup-$version-x64.exe"
           cargo test --locked installer_replaces_a_closed_process_and_preserves_user_data -- --ignored --nocapture
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Create draft release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $version = $env:RELEASE_TAG.Substring(1)
-          $root = "work/releases/$env:RELEASE_TAG"
-          $notes = "docs/releases/$env:RELEASE_TAG.md"
-          if (-not (Test-Path -LiteralPath $notes)) { throw 'Add release notes before tagging.' }
-          gh release create $env:RELEASE_TAG "$root/Gavnel-Setup-$version-x64.exe" "$root/SHA256SUMS.txt" --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Gavnel $env:RELEASE_TAG" --notes-file $notes
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Save Rust dependencies
-        if: always() && steps.cargo-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+      - name: Preserve tested release files
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug
-            target/.rustc_info.json
-          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
+            work/releases/${{ env.RELEASE_TAG }}/Gavnel-Setup-*-x64.exe
+            work/releases/${{ env.RELEASE_TAG }}/SHA256SUMS.txt
+          name: release-${{ env.RELEASE_TAG }}-${{ github.run_id }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+          overwrite: true
+  publish:
+    needs: windows-installer
+    concurrency:
+      group: stable-release-publication
+      cancel-in-progress: false
+    runs-on: windows-2025
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.windows-installer.outputs.commit }}
+          persist-credentials: false
+      - name: Restore tested release files
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ env.RELEASE_TAG }}-${{ github.run_id }}
+          path: work/releases/${{ env.RELEASE_TAG }}
+      - name: Verify uploaded draft and publish stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release.py publish --tag $env:RELEASE_TAG --directory "work/releases/$env:RELEASE_TAG"

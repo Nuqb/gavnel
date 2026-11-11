@@ -2,6 +2,24 @@
 
 Use the desktop source launcher to open the completed build. Use these checks when preparing an editor release.
 
+Run `cargo test --locked media::tests` for automated native-media checks. For the
+packaged-app smoke check, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-media-runtime.ps1 -App PATH_TO_GAVNEL_EXE
+```
+
+This creates temporary synthetic media and exercises inspection, thumbnails,
+audio mixing, and export without capturing or playing sound.
+
+For a release, also test a fresh installation without a `media` directory or
+bundled codec DLLs. With Windows Smart App Control enabled, open clips, seek,
+change the audio mix, and export. Include filenames containing spaces and Unicode,
+and portrait or custom crops with dimensions that are not multiples of 16.
+Run installation checks in a clean session; do not stop an active recorder to test
+an installer. Automated media tests do not establish Smart App Control acceptance
+on every machine.
+
 1. Open a clip → Edit. Drag both trim handles, enter exact times, undo/redo, and export. Confirm the source is unchanged.
 2. Crop to 9:16 and Square, drag the borders to switch to Custom, and use Play or Space. Confirm the exported framing matches.
 3. Open a separate-track recording. Mute the microphone, solo game audio, preview and export; check there is no doubled audio.

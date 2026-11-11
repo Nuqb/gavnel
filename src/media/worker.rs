@@ -40,9 +40,7 @@ impl MediaService {
             .spawn(move || {
                 for request in export_receiver {
                     if let Request::Export(project, options, state, cancel) = request {
-                        let result = Tools::locate().and_then(|t| {
-                            super::render::export(&t, &project, &options, &state, &cancel)
-                        });
+                        let result = super::render::export(&project, &options, &state, &cancel);
                         let mut p = state.lock().unwrap();
                         p.fraction = if result.is_ok() { 1.0 } else { p.fraction };
                         p.result = Some(result.map_err(|e| e.to_string()));
@@ -57,10 +55,9 @@ impl MediaService {
                     match request {
                         Request::Open(id, paths) => {
                             let result = (|| -> Result<_> {
-                                let tools = Tools::locate()?;
                                 let mut segments = Vec::new();
                                 for path in paths {
-                                    segments.push(ClipSegment::new(tools.probe(&path)?));
+                                    segments.push(ClipSegment::new(super::probe(&path)?));
                                 }
                                 let p = EditProject::new(segments);
                                 p.validate()?;
@@ -70,21 +67,19 @@ impl MediaService {
                                 .try_send(MediaReply::Open(id, result.map_err(|e| e.to_string())));
                         }
                         Request::Filmstrip(id, path) => {
-                            let result = Tools::locate().and_then(|t| t.filmstrip(&path));
+                            let result = super::filmstrip(&path);
                             let _ = tx.try_send(MediaReply::Filmstrip(
                                 id,
                                 result.map_err(|e| e.to_string()),
                             ));
                         }
                         Request::Frame(id, path, time) => {
-                            let result = Tools::locate().and_then(|t| t.frame(&path, time));
+                            let result = super::frame(&path, time);
                             let _ = tx
                                 .try_send(MediaReply::Frame(id, result.map_err(|e| e.to_string())));
                         }
                         Request::Export(project, options, state, cancel) => {
-                            let result = Tools::locate().and_then(|t| {
-                                super::render::export(&t, &project, &options, &state, &cancel)
-                            });
+                            let result = super::render::export(&project, &options, &state, &cancel);
                             let mut p = state.lock().unwrap();
                             p.fraction = if result.is_ok() { 1.0 } else { p.fraction };
                             p.result = Some(result.map_err(|e| e.to_string()));

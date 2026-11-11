@@ -16,7 +16,7 @@ Medal documents [slow interface/editor cases][medal-ui] and [choppy-recording tr
 
 Fast startup and low recording overhead are Gavnel's goals. **There is no side-by-side startup, FPS, or memory benchmark here.** Both alternatives also support hardware encoding. Actual results depend on the game, hardware, driver, recording settings, and storage.
 
-Gavnel currently has a narrower feature set: Windows with an NVIDIA GPU, a built-in game-detection catalog, and no automatic kill/death highlight detection, cloud sync, or built-in montage editor.
+Gavnel targets Windows with an NVIDIA GPU for recording. It includes a built-in game-detection catalog, clip editing and montages, and optional experimental game highlights. Editing uses Windows Media Foundation; cloud sync is not available. See the [user guide](usage.md) for the current editor and highlight features.
 
 [medal-plans]: https://support.medal.tv/support/solutions/articles/48001218475-medal-premium-faq
 [medal-local]: https://support.medal.tv/support/solutions/articles/48001227747

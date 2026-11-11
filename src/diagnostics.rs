@@ -2,6 +2,22 @@
 mod self_test;
 use crate::{audio, audio_check, branding, config, motion_test, sources, verify, video};
 pub fn early(args: &[String]) -> anyhow::Result<bool> {
+    if args.iter().any(|arg| arg == "--editor-self-test") {
+        crate::media::self_test()?;
+        println!("Native editor inspection, previews, audio mixing, and export passed.");
+        return Ok(true);
+    }
+    if let Some(index) = args.iter().position(|a| a == "--inspect-video") {
+        let path = args
+            .get(index + 1)
+            .ok_or_else(|| anyhow::anyhow!("Provide a video path"))?;
+        let info = crate::media::probe(std::path::Path::new(path))?;
+        println!(
+            "{}x{}, {:.3} seconds",
+            info.width, info.height, info.duration
+        );
+        return Ok(true);
+    }
     if args.iter().any(|a| a == "--settings-info") {
         let (settings, warning) = config::Settings::load_preserving_storage();
         println!("Gavnel {}", env!("CARGO_PKG_VERSION"));

@@ -359,31 +359,14 @@ mod tests {
         }
     }
     #[test]
-    #[ignore = "requires the media runtime and NVIDIA encoder; verifies native playback in an invisible test window"]
+    #[ignore = "requires Windows media playback; verifies native playback in an invisible test window"]
     fn native_playback_seeks_pauses_and_resumes() {
         unsafe {
             CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
         }
-        let tools = crate::media::Tools::locate().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("native.mp4");
-        let output = tools
-            .command(false)
-            .args([
-                "-v",
-                "error",
-                "-f",
-                "lavfi",
-                "-i",
-                "testsrc2=size=320x180:rate=30:duration=3",
-                "-c:v",
-                "h264_nvenc",
-                "-an",
-            ])
-            .arg(&path)
-            .output()
-            .unwrap();
-        assert!(output.status.success());
+        crate::media::self_test_fixture(&path).unwrap();
         unsafe {
             let class = w!("Gavnel.NativePlaybackTest");
             let instance = HINSTANCE(

@@ -81,6 +81,6 @@ Expanded catalogs were initially generated offline using Google's MADLAD-400 3B
 translator are not distributed with Gavnel. Provenance and pending review status
 are recorded in `assets/localization-status.json`.
 
-## FFmpeg editing runtime
+## Optional development reference tools
 
-The local editor bundles the LGPL shared FFmpeg runtime, including FFmpeg, FFprobe, FFplay, and matching libraries. This runtime reports LGPL-3.0-or-later. Its license text, GPLv3 text, headers, import libraries, documentation, source revision, and build-recipe links accompany the runtime in the `media` directory. See `packaging/media-SOURCES.md` and `packaging/media.json` for the pinned build and acquisition details. Gavnel invokes the tools as separate processes; recording continues to use Windows capture and NVIDIA NVENC directly.
+The application and installer do not bundle FFmpeg or its libraries. Optional OCR and process-audio integration-test fixtures use the pinned LGPL shared FFmpeg/FFplay build prepared by `scripts/get-media.py`. Its provenance and license materials remain under `packaging/media-SOURCES.md`, `packaging/media.json`, and `packaging/media-licenses`. These reference tools are used only during development, outside the shipped application.

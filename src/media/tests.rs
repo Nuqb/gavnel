@@ -1,205 +1,169 @@
 use super::*;
 use std::sync::{Arc, Mutex, atomic::AtomicBool};
-fn fixture(tools: &Tools, path: &Path, silent: bool) {
-    let mut cmd = tools.command(false);
-    cmd.args([
-        "-v",
-        "error",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        if silent {
-            "color=c=blue:size=480x360:rate=24:duration=2"
-        } else {
-            "testsrc2=size=640x360:rate=30:duration=4"
-        },
-    ]);
-    if !silent {
-        cmd.args([
-            "-f",
-            "lavfi",
-            "-i",
-            "sine=frequency=440:sample_rate=48000:duration=4",
-            "-f",
-            "lavfi",
-            "-i",
-            "sine=frequency=880:sample_rate=48000:duration=4",
-            "-filter_complex",
-            "[1:a][2:a]amix=inputs=2[mix]",
-            "-map",
-            "0:v",
-            "-map",
-            "[mix]",
-            "-map",
-            "1:a",
-            "-map",
-            "2:a",
-        ]);
-    }
-    let output = cmd
-        .args(["-c:v", "h264_nvenc", "-g", "90", "-c:a", "aac"])
-        .arg(path)
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    if !silent {
-        std::fs::write(
-            path.with_extension("tracks.json"),
-            r#"["Combined","Game","Microphone"]"#,
-        )
-        .unwrap();
-    }
+
+// Only the opt-in OCR image fixture uses an external reference generator.
+// This helper is absent from the shipped application.
+pub(crate) fn reference_command() -> std::process::Command {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("work/media/bin/ffmpeg.exe");
+    std::process::Command::new(path)
 }
+
 #[test]
-#[ignore = "requires pinned media runtime and NVIDIA encoder; generates synthetic files only"]
-fn editing_pipeline_preserves_sources_and_checks_real_media() {
-    let tools = Tools::locate().unwrap();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("work/editor-tests");
-    std::fs::create_dir_all(&root).unwrap();
-    let dir = tempfile::tempdir_in(root).unwrap();
-    let source = dir.path().join("Game footage ünicode.mp4");
-    let silent = dir.path().join("silent.mp4");
-    fixture(&tools, &source, false);
-    fixture(&tools, &silent, true);
-    let filmstrip = tools.filmstrip(&source).unwrap();
-    assert_eq!(filmstrip.len(), 8);
-    assert!(filmstrip.iter().all(|f| f.resolution()[0] == 144));
-    assert_ne!(filmstrip[0].pixels(), filmstrip[7].pixels());
+fn editor_works_without_external_media_tools() {
+    self_test::run().unwrap();
+}
+
+#[test]
+fn native_editing_preserves_sources_mixes_audio_and_maps_markers() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("Game footage \u{fc}.mp4");
+    let silent = directory.path().join("silent.mp4");
+    self_test::fixture(&source, true).unwrap();
+    self_test::fixture(&silent, false).unwrap();
     let original = std::fs::read(&source).unwrap();
-    let info = tools.probe(&source).unwrap();
-    assert_eq!(info.audio.len(), 2);
-    assert_eq!(info.audio[0].label, "Game");
-    assert_eq!(info.audio[1].label, "Microphone");
-    crate::bookmarks::append(&source, 1.2).unwrap();
+    let info = probe(&source).unwrap();
+    assert_eq!(
+        info.audio
+            .iter()
+            .map(|a| a.label.as_str())
+            .collect::<Vec<_>>(),
+        ["Game", "Microphone"]
+    );
+    let strips = filmstrip(&source).unwrap();
+    assert_ne!(strips[0].pixels(), strips[7].pixels());
+    // The top and bottom colors differ, exposing upside-down RGB buffers.
+    let image = frame(&source, 0.5).unwrap();
+    let pixels = image.pixels();
+    assert!(pixels[0].b() + 80 < pixels[80 * 160].b());
+    crate::bookmarks::append(&source, 0.8).unwrap();
     crate::highlights::save_events(
         &source,
         &[crate::highlights::GameEvent {
             game: crate::highlights::Game::Cs2,
             kind: crate::highlights::EventKind::Kill,
-            ticks: 12_000_000,
+            ticks: 8_000_000,
             source: "fixture".into(),
             confidence: 1.0,
         }],
     )
     .unwrap();
-    let mut first = ClipSegment::new(tools.probe(&source).unwrap());
-    first.start = 31.0 / 30.0;
-    first.end = 3.2;
+    let mut first = ClipSegment::new(probe(&source).unwrap());
+    first.start = 7.0 / 24.0;
+    first.end = 1.5;
     first.crop.aspect = Aspect::Vertical;
     first.audio[1].muted = true;
-    let project = EditProject::new(vec![first, ClipSegment::new(tools.probe(&silent).unwrap())]);
-    let path = dir.path().join("project.gavnel-project");
-    project.save(&path).unwrap();
-    project.save(&path).unwrap();
-    assert_eq!(EditProject::load(&path).unwrap(), project);
-    let output = dir.path().join("edited.mp4");
+    let mut second = ClipSegment::new(probe(&silent).unwrap());
+    second.end = 0.5;
+    let project = EditProject::new(vec![first.clone(), second]);
+    let saved = directory.path().join("project.gavnel-project");
+    project.save(&saved).unwrap();
+    assert_eq!(EditProject::load(&saved).unwrap(), project);
+    let output = directory.path().join("edited.mp4");
     let options = ExportOptions {
         path: output.clone(),
         height: Some(720),
-        size_mb: Some(10.0),
+        size_mb: Some(1.0),
         canvas: None,
     };
     let progress = Arc::new(Mutex::new(JobProgress::default()));
     let cancel = AtomicBool::new(false);
-    super::render::export(&tools, &project, &options, &progress, &cancel).unwrap();
-    let rendered = tools.probe(&output).unwrap();
-    assert_eq!((rendered.width, rendered.height), (202, 360));
-    assert_eq!(rendered.audio.len(), 1);
-    assert!((rendered.duration - project.duration()).abs() < 0.25);
-    assert!(std::fs::metadata(&output).unwrap().len() <= 10_000_000);
+    render::export(&project, &options, &progress, &cancel).unwrap();
+    let exported = probe(&output).unwrap();
+    assert_eq!((exported.width, exported.height), (54, 96));
+    assert_eq!(exported.audio.len(), 1);
+    assert!((exported.duration - project.duration()).abs() < 0.15);
+    assert!(std::fs::metadata(&output).unwrap().len() <= 1_000_000);
     assert_eq!(original, std::fs::read(&source).unwrap());
-    let first_frame = tools.frame(&output, 0.0).unwrap();
-    let expected = tools
-        .command(false)
-        .args(["-v", "error", "-ss", &format!("{:.6}", 31.0 / 30.0), "-i"])
-        .arg(&source)
-        .args([
-            "-vf",
-            "crop=202:360:218:0",
-            "-frames:v",
-            "1",
-            "-pix_fmt",
-            "rgba",
-            "-f",
-            "rawvideo",
-            "pipe:1",
-        ])
-        .output()
-        .unwrap();
-    assert!(expected.status.success());
-    let actual: Vec<u8> = first_frame
+    let markers = crate::bookmarks::load(&output).unwrap();
+    assert!((markers[0] - (0.8 - first.start)).abs() < 0.001);
+    assert_eq!(crate::highlights::load_events(&output).len(), 1);
+    let mut video = frames::Video::new(&first.info).unwrap();
+    video.seek(first.start).unwrap();
+    let expected = video
+        .at(first.start)
+        .unwrap()
+        .render(first.crop.pixels(&first.info), (54, 96));
+    let actual = frame(&output, 0.0).unwrap();
+    let error = actual
         .pixels()
         .iter()
-        .flat_map(|p| p.to_array())
-        .collect();
-    let error = actual
-        .iter()
-        .zip(&expected.stdout)
-        .map(|(a, b)| (*a as f64 - *b as f64).abs())
+        .zip(expected.as_chunks::<4>().0)
+        .map(|(a, b)| {
+            (a.r() as f64 - b[2] as f64).abs()
+                + (a.g() as f64 - b[1] as f64).abs()
+                + (a.b() as f64 - b[0] as f64).abs()
+        })
         .sum::<f64>()
-        / actual.len() as f64;
-    assert!(error < 15.0, "Trim/crop first-frame mismatch: {error}");
-    let markers = crate::bookmarks::load(&output).unwrap();
-    assert!((markers[0] - (1.2 - 31.0 / 30.0)).abs() < 0.001);
-    assert_eq!(crate::highlights::load_events(&output).len(), 1);
-    let audio = tools
-        .command(false)
-        .args(["-v", "error", "-i"])
-        .arg(&output)
-        .args([
-            "-t", "0.6", "-f", "f32le", "-ac", "1", "-ar", "48000", "pipe:1",
-        ])
-        .output()
-        .unwrap();
-    assert!(audio.status.success());
-    let samples: Vec<f64> = audio
-        .stdout
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|b| f32::from_le_bytes(*b) as f64)
-        .collect();
-    let magnitude = |frequency: f64| {
+        / (54.0 * 96.0 * 3.0);
+    assert!(error < 18.0, "Trim/crop frame mismatch: {error}");
+    let audio = crate::audio_check::decoded_frames(&output, 1).unwrap();
+    let magnitude = |hz: f64| {
         let (mut re, mut im) = (0.0, 0.0);
-        for (i, s) in samples.iter().enumerate() {
-            let a = std::f64::consts::TAU * frequency * i as f64 / 48000.0;
-            re += s * a.cos();
-            im += s * a.sin();
+        for (i, sample) in audio.iter().take(24_000).enumerate() {
+            let angle = std::f64::consts::TAU * hz * i as f64 / 48_000.0;
+            re += sample[0] as f64 * angle.cos();
+            im += sample[0] as f64 * angle.sin();
         }
         (re * re + im * im).sqrt()
     };
     assert!(
         magnitude(440.0) > magnitude(880.0) * 10.0,
-        "Muted microphone leaked into the export"
+        "Muted microphone leaked into export"
     );
-    assert!(super::render::export(&tools, &project, &options, &progress, &cancel).is_err());
-    assert_eq!(original, std::fs::read(&source).unwrap());
+    assert!(render::export(&project, &options, &progress, &cancel).is_err());
     let cancelled = ExportOptions {
-        path: dir.path().join("cancelled.mp4"),
-        height: None,
-        size_mb: None,
-        canvas: None,
+        path: directory.path().join("cancelled.mp4"),
+        ..options
     };
-    assert!(
-        super::render::export(
-            &tools,
-            &project,
-            &cancelled,
-            &progress,
-            &AtomicBool::new(true)
-        )
-        .is_err()
-    );
+    assert!(render::export(&project, &cancelled, &progress, &AtomicBool::new(true)).is_err());
     assert!(!cancelled.path.exists());
-    assert!(!std::fs::read_dir(dir.path()).unwrap().any(|e| {
-        e.unwrap()
+    assert!(!std::fs::read_dir(directory.path()).unwrap().any(|entry| {
+        entry
+            .unwrap()
             .file_name()
             .to_string_lossy()
             .starts_with(".gavnel-export-")
     }));
+}
+
+#[test]
+fn malformed_and_missing_videos_return_errors() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("broken.mp4");
+    assert!(probe(&path).is_err());
+    std::fs::write(&path, b"not a video").unwrap();
+    assert!(probe(&path).is_err());
+    assert!(frame(&path, 0.0).is_err());
+}
+
+#[test]
+fn native_decoder_preserves_visible_edges_with_macroblock_padding() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("padded.mp4");
+    let writer = encode::Writer::new(&path, (54, 54, 24), 800_000, 0).unwrap();
+    let bytes: Vec<u8> = (0..54)
+        .flat_map(|y| {
+            (0..54).flat_map(move |_| {
+                if y < 27 {
+                    [10, 10, 220, 255]
+                } else {
+                    [220, 10, 10, 255]
+                }
+            })
+        })
+        .collect();
+    for frame in 0..3 {
+        writer
+            .write(
+                writer.video,
+                &bytes,
+                frame * 10_000_000 / 24..(frame + 1) * 10_000_000 / 24,
+            )
+            .unwrap();
+    }
+    writer.finish().unwrap();
+    let image = frame(&path, 0.0).unwrap();
+    assert_eq!(image.resolution(), [54, 54]);
+    assert!(image.pixels()[0].r() > 180);
+    assert!(image.pixels()[53 * 54].b() > 180);
 }

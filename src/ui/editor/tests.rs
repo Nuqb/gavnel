@@ -200,11 +200,11 @@ fn export_editor_previews() {
     std::fs::create_dir_all("work/editor-previews").unwrap();
     let sample = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("work/editor-smoke/source.mp4");
     let demo = if sample.is_file() {
-        crate::media::Tools::locate().ok().and_then(|t| {
-            let frame = t.frame(&sample, 1.0).ok()?;
-            let strip = t.filmstrip(&sample).ok()?;
+        (|| {
+            let frame = crate::media::frame(&sample, 1.0).ok()?;
+            let strip = crate::media::filmstrip(&sample).ok()?;
             Some((frame, strip))
-        })
+        })()
     } else {
         None
     };

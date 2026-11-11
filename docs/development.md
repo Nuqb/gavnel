@@ -6,13 +6,18 @@
 
 Read [the software-quality guide](software-quality.md) before planning or editing. This is a native Rust/egui Windows app using local files, not a server-backed application. Match its existing module boundaries and verify behavior after refactoring.
 
+For requests to push an update, follow the [release runbook](releases.md).
+Prepare the version and notes, commit on `main`, then use
+`scripts/release.ps1 -Version X.Y.Z`. Completion includes the published stable GitHub release;
+`-Resume` continues transient failures. A source-only push must be explicitly requested.
+
 ## Requirements
 
 - Stable Rust with the `x86_64-pc-windows-msvc` toolchain.
 - Visual Studio C++ Build Tools and the Windows SDK.
 - Windows 11 x64, an SDR source, and an NVIDIA GPU with a compatible NVENC driver for live recording.
 
-Building dependencies may require internet access. Running the recorder does not require a login or internet connection. NVENC loads from the installed NVIDIA driver; no separate FFmpeg installation is required.
+Building dependencies may require internet access. Running the recorder does not require a login or internet connection. NVENC loads from the installed NVIDIA driver. The editor uses Windows Media Foundation; building and launching Gavnel does not download an external media runtime.
 
 ## Build and run locally
 
@@ -35,9 +40,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-launcher.ps1
 ## Checks
 
 ```powershell
-cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets --locked -- -D warnings
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -BuildOnly
 ```
 
@@ -49,6 +52,7 @@ Run `cargo fmt` after code edits. The build-only launcher checks the runnable re
 - `src/audio/`, `src/video/`, `src/sources/` — audio capture/encoding, NVIDIA encoding, and Windows capture sources.
 - `src/ui/` — library, playback, source selection, settings pages, shared controls, and native window integration.
 - `src/replay.rs`, `src/recording.rs`, `src/export.rs` — retained packets, streamed sessions, and MP4 output.
+- `src/media/` — Windows-native video inspection, frame decoding, audio mixing, and editor exports, separate from the recording pipeline.
 - `src/config.rs`, `src/library.rs`, `src/storage.rs` — preference persistence, local file operations, and storage limits.
 - `src/diagnostics/` — explicit recording diagnostics, separated from normal desktop startup.
 
@@ -149,20 +153,30 @@ embedded in the executable; the notices must still accompany redistribution.
 
 ## Editing and highlight verification
 
-`python scripts/get-media.py` prepares the pinned LGPL shared editing runtime.
-The source launcher and installer packaging include it automatically. Export jobs
-run separately from recording and media-inspection workers. Projects and labeled
-event/audio sidecars are local files; there is no database or remote service.
+The editor uses Windows Media Foundation in-process for metadata, timeline
+frames, previews, audio mixing, and H.264/AAC exports. Neither the source launcher
+nor the installer includes external editing tools. Export jobs run separately
+from recording and media-inspection workers. Projects and labeled event/audio
+sidecars are local files; there is no database or remote service.
 
-The following ignored tests exercise local media, OCR, and process audio:
+The normal test suite includes native editing, source-preservation, crop/trim,
+audio selection, marker mapping, and decoder-padding checks. An installed app
+can run the same isolated smoke path with `Gavnel.exe --editor-self-test`.
+Native export uses Windows encoding and can have different performance from the
+recorder's NVENC path. No capture device or audio playback is used by these tests.
+
+The following commands exercise native media, optional OCR, and process audio:
 
 ```powershell
-cargo test --locked editing_pipeline_preserves_sources_and_checks_real_media -- --ignored
+cargo test --locked native_editing_preserves_sources_mixes_audio_and_maps_markers
 cargo test --locked windows_ocr_recognizes_synthetic_highlight -- --ignored
 cargo test --locked process_loopback_isolates_selected_application -- --ignored
 cargo test --locked export_editor_previews -- --ignored
 ```
 
+The optional OCR and process-audio fixtures need `python scripts/get-media.py`
+to prepare their FFmpeg image generator and FFplay tone players. These reference
+tools are not part of Gavnel and are not needed by the normal test suite.
 The process-audio test plays two quiet synthetic tones and captures only its
 selected child process. The other tests do not record the desktop or microphone.
 Game-event fixtures cover CS2 authentication, duplicates, spectators, transitions,

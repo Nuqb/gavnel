@@ -17,8 +17,6 @@ try {
     "`r`n[$(Get-Date -Format o)] Launcher started (BuildOnly=$BuildOnly, Background=$Background)" | Add-Content -LiteralPath $log
     Push-Location $projectRoot
     try {
-        & python (Join-Path $PSScriptRoot 'get-media.py')
-        if ($LASTEXITCODE -ne 0) { throw 'Could not prepare editing tools.' }
         # Cargo checks its dependency graph, including assets, on every launch.
         # Use a separate output folder so a running build never locks the compiler output.
         $ErrorActionPreference = 'Continue'
@@ -40,8 +38,6 @@ try {
     $app = Join-Path $runDir 'Gavnel.exe'
     New-Item -ItemType Directory -Force $runDir | Out-Null
     if (-not (Test-Path -LiteralPath $app)) { Copy-Item -LiteralPath $built -Destination $app }
-    & python (Join-Path $PSScriptRoot 'get-media.py') --copy-to (Join-Path $runDir 'media')
-    if ($LASTEXITCODE -ne 0) { throw 'Could not prepare the versioned editing runtime.' }
     # Publish only a complete versioned executable, including after BuildOnly.
     $ready = Join-Path $projectRoot 'target\launcher\ready.txt'
     [System.IO.File]::WriteAllText("$ready.tmp", $hash)

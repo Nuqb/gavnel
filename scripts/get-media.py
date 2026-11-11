@@ -1,4 +1,8 @@
-"""Fetch and verify the pinned LGPL editing runtime (development/packaging only)."""
+"""Prepare pinned LGPL reference tools for optional OCR/process-audio tests only.
+
+The app, source launcher, release packaging, and normal tests do not need these
+tools. The --copy-to option is retained for separate development fixture folders.
+"""
 import argparse
 import hashlib
 import json

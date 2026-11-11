@@ -26,7 +26,7 @@
 
 ## Development
 
-Native **Rust / egui** desktop app, Windows capture, and **NVIDIA NVENC** encoding. Recordings and preferences use local files; there is no application server. FFmpeg is bundled for local editing; no separate installation is required.
+Native **Rust / egui** desktop app, Windows capture, and **NVIDIA NVENC** recording. The editor uses Windows Media Foundation for previews, audio mixing, and H.264/AAC exports. Recordings and preferences use local files; there is no application server or external editing-tool installation.
 
 ### Build & run
 
@@ -52,15 +52,14 @@ Read the [contributor guide](CONTRIBUTING.md) before making changes.
 
 ```powershell
 cargo fmt
-cargo test --locked
-cargo clippy --all-targets --locked -- -D warnings
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -BuildOnly
 ```
 
 Replay retention has a **512 MiB compressed-packet budget**, not a cap on total RAM or GPU memory. Long recordings stream to disk. Startup speed and recording overhead are goals; no comparative performance benchmark is published here.
 
 - [Development & diagnostics](docs/development.md) — source map, onboarding previews, and recording diagnostics.
-- [Release packaging](docs/releases.md)
+- [Release command and recovery](docs/releases.md)
 - [Game detection](docs/game-detection.md)
 - [Localization](docs/localization.md)
 

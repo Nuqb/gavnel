@@ -13,5 +13,4 @@ __pycache__/
 *.pfx
 *.p12
 
-# Local agent instructions.
-/AGENTS.md
+# AGENTS.md is versioned so contributor and release instructions follow the source.

@@ -86,7 +86,7 @@ Settings are shared between app versions in `%APPDATA%\Gavnel\Gavnel\config`. Th
 
 ## Current capture limits
 
-- Windows 11 x64, SDR, and a compatible NVIDIA GPU/driver are the current target. There is no CPU, AMD, or Intel video-encoding fallback.
+- Windows 11 x64, SDR, and a compatible NVIDIA GPU/driver are the current recording target. Live recording has no CPU, AMD, or Intel video-encoding fallback.
 - One source is captured at a time. A single replay export can be active with one more queued.
 - The retained compressed-packet budget is 512 MiB; total RAM and GPU memory can be higher.
 - Game/window capture becomes black when its target loses focus; audio continues. A monitor source captures everything visible on that display.
@@ -119,7 +119,10 @@ The timeline shows video thumbnails, time marks, bookmarks, and draggable trim
 handles. Click or drag the timeline to seek. Edited playback files are cached locally.
 **Export** creates a new H.264/AAC MP4, with optional resolution and file-size limits.
 Originals are preserved. One export can run with one more queued; Cancel removes
-unfinished export files. Exports require an available NVIDIA encoder.
+unfinished export files. Editing and exports use Windows Media Foundation inside
+Gavnel, with no FFmpeg installation or separate editing-tool download. Exports
+use Windows H.264/AAC encoding; recording continues to use NVIDIA NVENC, and export
+speed can differ from recording speed.
 
 Save reusable edits with **Save project**. Projects reference original videos;
 keep those videos available. Leaving with unsaved edits asks you to
