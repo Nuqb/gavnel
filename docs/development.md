@@ -4,7 +4,7 @@
 
 ## Before making changes
 
-Read [AGENTS.md](../AGENTS.md) and [software-quality.md](software-quality.md) before planning or editing. This is a native Rust/egui Windows app using local files, not a server-backed application. Match its existing module boundaries and verify behavior after refactoring.
+Read [the software-quality guide](software-quality.md) before planning or editing. This is a native Rust/egui Windows app using local files, not a server-backed application. Match its existing module boundaries and verify behavior after refactoring.
 
 ## Requirements
 

@@ -48,7 +48,7 @@ Keep local shortcuts pointed at the launcher; do not replace them with direct ex
 
 ### Checks & contribution
 
-Read the [software quality guide](docs/software-quality.md) before making changes.
+Read the [contributor guide](CONTRIBUTING.md) before making changes.
 
 ```powershell
 cargo fmt
