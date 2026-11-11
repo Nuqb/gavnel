@@ -5,15 +5,18 @@ mod frames;
 mod inspect;
 mod model;
 mod native;
+mod publish;
 mod render;
 mod self_test;
 #[cfg(test)]
 pub(crate) mod tests;
+mod trim;
 mod worker;
 use anyhow::{Context, Result, ensure};
 pub use frames::{filmstrip, frame};
 pub use inspect::probe;
 pub use model::*;
+pub use render::estimated_size_mb;
 pub use self_test::run as self_test;
 use std::path::{Path, PathBuf};
 pub use worker::{MediaReply, MediaService};
@@ -26,6 +29,7 @@ pub fn preview_dimensions(project: &EditProject) -> (u32, u32, u32) {
     render::dimensions(
         project,
         &ExportOptions {
+            replace_source: false,
             path: PathBuf::new(),
             height: Some(720),
             size_mb: None,

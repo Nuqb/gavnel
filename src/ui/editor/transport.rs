@@ -6,7 +6,7 @@ pub(super) struct Host<'a> {
 }
 impl Editor {
     pub(super) fn take_play_shortcut(&mut self, ui: &mut egui::Ui) {
-        if self.leave.is_some() || self.export_open || ui.ctx().egui_wants_keyboard_input() {
+        if self.leave.is_some() || self.save_open || ui.ctx().egui_wants_keyboard_input() {
             return;
         }
         let pressed = ui.input_mut(|i| {
@@ -31,7 +31,7 @@ impl Editor {
         player: &mut Option<crate::player::Player>,
         host: Host<'_>,
     ) {
-        if self.export_open {
+        if self.save_open {
             return;
         }
         if let Some((_, cancel)) = self.preview_job.take() {
@@ -187,6 +187,7 @@ impl Editor {
         match service.export(
             preview,
             ExportOptions {
+                replace_source: false,
                 path,
                 height: Some(720),
                 size_mb: None,

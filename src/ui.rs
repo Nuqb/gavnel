@@ -1,5 +1,6 @@
 mod add_game;
 mod audio_apps;
+mod back_button;
 mod capture_view;
 mod checkbox;
 mod clip_card;
@@ -14,9 +15,15 @@ mod microphone_test;
 mod motion;
 pub(crate) mod onboarding;
 mod playback;
+mod playback_controls;
+mod playback_overlay;
+#[cfg(debug_assertions)]
+pub(crate) use playback_overlay::validate_native as validate_player_overlay;
 mod preferences;
 mod quick;
 mod radio;
+mod rename;
+mod saving;
 mod settings;
 mod settings_audio;
 mod settings_games;
@@ -34,6 +41,7 @@ mod tray;
 mod updates;
 mod views;
 mod widgets;
+mod window_frame;
 
 use crate::i18n::{self, tr};
 use crate::keyboard::Manager as GlobalHotKeyManager;
@@ -102,8 +110,11 @@ pub struct Gavnel {
     lifecycle_test: bool,
     context: egui::Context,
     player: Option<crate::player::Player>,
+    player_fullscreen: bool,
+    player_controls: playback_overlay::Visibility,
     editor: Option<editor::Editor>,
     media: crate::media::MediaService,
+    saves: saving::Saves,
     montage_selection: Vec<PathBuf>,
     selecting_clips: bool,
     parent_window: windows::Win32::Foundation::HWND,
@@ -136,6 +147,7 @@ pub struct Gavnel {
     add_game_dialog: Option<add_game::Dialog>,
     delete_pending: Option<PathBuf>,
     delete_error: Option<String>,
+    rename_dialog: Option<rename::Dialog>,
     last_saved: u64,
     last_library: Instant,
     search: String,
@@ -203,8 +215,11 @@ impl Gavnel {
             lifecycle_test,
             context: ctx.clone(),
             player: None,
+            player_fullscreen: false,
+            player_controls: playback_overlay::Visibility::default(),
             editor: None,
             media: crate::media::MediaService::new(),
+            saves: saving::Saves::default(),
             montage_selection: Vec::new(),
             selecting_clips: false,
             parent_window,
@@ -237,6 +252,7 @@ impl Gavnel {
             add_game_dialog: None,
             delete_pending: None,
             delete_error: None,
+            rename_dialog: None,
             last_saved: 0,
             last_library: Instant::now(),
             search: String::new(),
@@ -383,16 +399,22 @@ impl Gavnel {
     }
 }
 impl eframe::App for Gavnel {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        [0.0; 4]
+    }
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = &root.ctx().clone();
         self.updates
             .poll(ctx, !self.lifecycle_test && self.updates.installed);
         i18n::with_language(self.settings.language, || {
+            self.poll_video_saves(ctx);
+            let saving_blocks_exit = self.protect_video_saves(ctx);
             if self.quitting.load(Ordering::Acquire) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 return;
             }
             if ctx.input(|i| i.viewport().close_requested())
+                && !saving_blocks_exit
                 && !self.quitting.load(Ordering::Relaxed)
                 && self.tray.is_some()
                 && self.settings.close_to_tray
@@ -413,7 +435,11 @@ impl eframe::App for Gavnel {
             if !self.visible.load(Ordering::Relaxed) && !self.quitting.load(Ordering::Relaxed) {
                 return;
             }
+            if !self.player_fullscreen {
+                window_frame::resize(root);
+            }
             if self.onboarding.is_some() {
+                window_frame::show(root, 40.0, |_| {});
                 self.show_onboarding(root);
                 return;
             }
@@ -448,6 +474,7 @@ impl eframe::App for Gavnel {
             }
             i18n::with_language(self.settings.language, || {
                 self.draw(root, &status);
+                self.video_save_ui(ctx);
                 self.show_source_picker(ctx, &status);
                 if let Some(dialog) = &mut self.add_game_dialog
                     && dialog.show(ctx, &mut self.settings)
@@ -482,6 +509,7 @@ impl eframe::App for Gavnel {
             if self.page != Page::Player && self.page != Page::Editor {
                 self.player = None;
             }
+            self.show_rename_dialog(ctx);
             if let Some(path) = self.delete_pending.clone() {
                 let clip = self
                     .library

@@ -1,5 +1,5 @@
 use super::*;
-use crossbeam_channel::{Receiver, Sender, bounded};
+use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use std::sync::{Arc, Mutex, atomic::AtomicBool};
 
 pub enum MediaReply {
@@ -33,7 +33,9 @@ impl Default for MediaService {
 impl MediaService {
     pub fn new() -> Self {
         let (sender, receiver) = bounded::<Request>(2);
-        let (tx, replies) = bounded(8);
+        // Requests are bounded; preserve every progressive thumbnail update,
+        // including completion, even when a paint takes longer than decoding.
+        let (tx, replies) = unbounded();
         let (export_sender, export_receiver) = bounded(1);
         let exporter = std::thread::Builder::new()
             .name("gavnel-export".into())
@@ -67,11 +69,13 @@ impl MediaService {
                                 .try_send(MediaReply::Open(id, result.map_err(|e| e.to_string())));
                         }
                         Request::Filmstrip(id, path) => {
-                            let result = super::filmstrip(&path);
-                            let _ = tx.try_send(MediaReply::Filmstrip(
-                                id,
-                                result.map_err(|e| e.to_string()),
-                            ));
+                            let result = super::frames::filmstrip_progressive(&path, |images| {
+                                let _ = tx.try_send(MediaReply::Filmstrip(id, Ok(images.to_vec())));
+                            });
+                            if let Err(error) = result {
+                                let _ =
+                                    tx.try_send(MediaReply::Filmstrip(id, Err(error.to_string())));
+                            }
                         }
                         Request::Frame(id, path, time) => {
                             let result = super::frame(&path, time);
@@ -127,10 +131,11 @@ impl MediaService {
             ..Default::default()
         }));
         let cancel = Arc::new(AtomicBool::new(false));
-        self.cancellations
-            .lock()
-            .unwrap()
-            .push(Arc::downgrade(&cancel));
+        {
+            let mut cancellations = self.cancellations.lock().unwrap();
+            cancellations.retain(|token| token.strong_count() > 0);
+            cancellations.push(Arc::downgrade(&cancel));
+        }
         self.export_sender
             .as_ref()
             .context("Editor is closed")?

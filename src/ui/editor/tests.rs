@@ -9,6 +9,28 @@ struct Harness {
     size: Vec2,
     text_input: Option<String>,
 }
+
+#[test]
+fn timeline_keeps_partial_frames_and_finishes_without_reloading_textures() {
+    let ctx = egui::Context::default();
+    let mut editor = Editor::new(PathBuf::from("Clips"));
+    let path = PathBuf::from("example.mp4");
+    let image = egui::ColorImage::filled([16, 9], Color32::RED);
+    editor.strip_pending = Some((42, path.clone()));
+    editor.receive_filmstrip(&ctx, 42, Ok(vec![image.clone()]));
+    assert!(editor.strip_pending.is_some());
+    let first = editor.filmstrips[&path][0].id();
+    editor.receive_filmstrip(&ctx, 42, Ok(vec![image; 8]));
+    assert!(editor.strip_pending.is_none());
+    assert_eq!(editor.filmstrips[&path].len(), 8);
+    assert_eq!(editor.filmstrips[&path][0].id(), first);
+
+    editor.strip_pending = Some((43, path.clone()));
+    editor.receive_filmstrip(&ctx, 43, Err("Unreadable video".into()));
+    assert!(editor.strip_pending.is_none());
+    assert_eq!(editor.filmstrips[&path].len(), 8);
+    assert_eq!(editor.error, "Unreadable video");
+}
 impl Harness {
     fn new(size: Vec2, tab: Tab) -> Self {
         let ctx = egui::Context::default();
@@ -90,19 +112,16 @@ impl Harness {
                             ui.label(RichText::new("Editor").size(24.0).strong());
                             buttons::enabled(ui, buttons::Icon::Undo, "Undo", false);
                             buttons::enabled(ui, buttons::Icon::Redo, "Redo", false);
-                            ui.button("Save project").clicked();
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| {
-                                    views::orange_button(ui, "Export");
-                                },
-                            );
+                            buttons::enabled(ui, buttons::Icon::SaveVideo, "Save video", true);
                         });
                         if let Some(text) = &mut self.text_input {
                             ui.text_edit_singleline(text).request_focus();
                         }
                         self.editor.body(ui, &self.service, &mut None);
                     });
+                if self.editor.save_open {
+                    self.editor.save_modal(&self.ctx);
+                }
             },
         );
         for (id, deltas) in &output.textures_delta.set {
@@ -379,4 +398,129 @@ fn clicking_play_requests_playback_and_typing_space_does_not() {
     ]);
     assert!(!h.editor.play_requested);
     assert_eq!(h.text_input.as_deref(), Some(" "));
+}
+
+fn save_texts(shape: &egui::Shape, labels: &mut Vec<(String, egui::Rect)>) {
+    match shape {
+        egui::Shape::Text(text) => {
+            labels.push((text.galley.text().into(), text.visual_bounding_rect()))
+        }
+        egui::Shape::Vec(shapes) => {
+            for shape in shapes {
+                save_texts(shape, labels);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn save_labels(output: &egui::FullOutput) -> Vec<(String, egui::Rect)> {
+    let mut labels = vec![];
+    for shape in &output.shapes {
+        save_texts(&shape.shape, &mut labels);
+    }
+    labels
+}
+
+#[test]
+fn save_modal_is_centered_with_inline_actions_and_editable_settings() {
+    let mut h = Harness::new(Vec2::new(1000.0, 650.0), Tab::Trim);
+    h.editor.save_open = true;
+    for _ in 0..24 {
+        h.frame(vec![]);
+    }
+    let output = h.frame(vec![]);
+    let labels = save_labels(&output);
+    let find = |name: &str| labels.iter().find(|(text, _)| text == name).unwrap().1;
+    assert!(
+        (find("Save current video").center().y - find("Save as new video").center().y).abs() < 1.0
+    );
+    assert!(labels.iter().any(|(text, _)| text == "1920 \u{00d7} 1080"));
+    assert!(
+        !labels
+            .iter()
+            .any(|(text, _)| text.contains("project") || text == "720p")
+    );
+    fn panel_rect(shape: &egui::Shape) -> Option<egui::Rect> {
+        match shape {
+            egui::Shape::Rect(rect) if rect.fill == PANEL && rect.rect.width() > 400.0 => {
+                Some(rect.rect)
+            }
+            egui::Shape::Vec(shapes) => shapes.iter().find_map(panel_rect),
+            _ => None,
+        }
+    }
+    let panel = output
+        .shapes
+        .iter()
+        .find_map(|shape| panel_rect(&shape.shape))
+        .expect("modal panel");
+    assert!(
+        panel.center().distance(egui::pos2(500.0, 325.0)) < 2.0,
+        "{panel:?}"
+    );
+    assert!(labels.iter().any(|(text, _)| text == "\u{2248} 61.6 MB"));
+    assert!(
+        !labels
+            .iter()
+            .any(|(text, _)| text == "No limit" || text == "Edit")
+    );
+    let close = icon_rect(
+        &output,
+        &h.ctx,
+        "save-close",
+        include_bytes!("../../../assets/icons/close.svg"),
+    );
+    assert!((close.center().y - find("Save video").center().y).abs() < 3.0);
+    assert!(close.right() > panel.right() - 60.0);
+    let edit = icon_rect(
+        &output,
+        &h.ctx,
+        "save-edit",
+        include_bytes!("../../../assets/icons/edit.svg"),
+    )
+    .center();
+    h.frame(vec![
+        egui::Event::PointerMoved(edit),
+        egui::Event::PointerButton {
+            pos: edit,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: egui::Modifiers::NONE,
+        },
+    ]);
+    h.frame(vec![egui::Event::PointerButton {
+        pos: edit,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::NONE,
+    }]);
+    let output = h.frame(vec![]);
+    assert!(h.editor.save_editing);
+    assert!(save_labels(&output).iter().any(|(text, _)| text == "720p"));
+}
+
+#[test]
+#[ignore = "renders save modal images for visual review"]
+fn export_save_modal_previews() {
+    std::fs::create_dir_all("work/editor-previews").unwrap();
+    for editing in [false, true] {
+        let mut h = Harness::new(Vec2::new(1000.0, 650.0), Tab::Trim);
+        h.editor.save_open = true;
+        h.editor.save_editing = editing;
+        for _ in 0..24 {
+            h.frame(vec![]);
+        }
+        let output = h.frame(vec![]);
+        let pixels = super::super::test_render::raster(&h.ctx, h.size, &h.textures, output);
+        let file =
+            std::fs::File::create(format!("work/editor-previews/save-{editing}.png")).unwrap();
+        let mut encoder = png::Encoder::new(file, 1000, 650);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder
+            .write_header()
+            .unwrap()
+            .write_image_data(&pixels.into_iter().flatten().collect::<Vec<_>>())
+            .unwrap();
+    }
 }

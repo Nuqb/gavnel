@@ -59,8 +59,10 @@ impl Render<'_> {
                 writer.write(writer.audio[0], &pcm, range)?;
                 audio_offset += count as u64;
             }
-            self.progress.lock().unwrap().fraction =
-                ((elapsed + end) / self.project.duration() * 0.99) as f32;
+            let mut state = self.progress.lock().unwrap();
+            state.fraction = state
+                .fraction
+                .max(((elapsed + end) / self.project.duration() * 0.94) as f32);
         }
         Ok(())
     }

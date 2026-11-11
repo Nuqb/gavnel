@@ -112,7 +112,13 @@ impl Gavnel {
             }
         });
         ui.add_space(14.0);
-        if ui.button(tr("Organize existing clips")).clicked() {
+        if ui
+            .add_enabled(
+                !self.saves.busy(),
+                egui::Button::new(tr("Organize existing clips")),
+            )
+            .clicked()
+        {
             match self.library.organize(&self.settings.clips_dir) {
                 Ok(()) => self.message = tr("Organizing recordings…").into(),
                 Err(error) => self.message = error.to_string(),

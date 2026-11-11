@@ -1,3 +1,5 @@
+mod layout;
+pub(crate) mod overlay;
 use anyhow::{Context, Result};
 use eframe::egui;
 use std::{
@@ -9,11 +11,8 @@ use std::{
 };
 use windows::{
     Win32::{
-        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM},
-        Graphics::Gdi::{
-            BLACK_BRUSH, CombineRgn, CreateRectRgn, DeleteObject, GetStockObject, HBRUSH, RGN_DIFF,
-            SetWindowRgn,
-        },
+        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
+        Graphics::Gdi::{BLACK_BRUSH, GetStockObject, HBRUSH},
         Media::MediaFoundation::*,
         System::Com::*,
         UI::WindowsAndMessaging::*,
@@ -26,11 +25,15 @@ struct Events {
     ctx: egui::Context,
     visible: Arc<AtomicBool>,
     error: Arc<AtomicU32>,
+    first_frame: Arc<AtomicBool>,
 }
 impl IMFMediaEngineNotify_Impl for Events_Impl {
     fn EventNotify(&self, event: u32, _param1: usize, param2: u32) -> windows::core::Result<()> {
         if event == MF_MEDIA_ENGINE_EVENT_ERROR.0 as u32 {
             self.error.store(param2.max(1), Ordering::Relaxed);
+        }
+        if event == MF_MEDIA_ENGINE_EVENT_FIRSTFRAMEREADY.0 as u32 {
+            self.first_frame.store(true, Ordering::Release);
         }
         if self.visible.load(Ordering::Relaxed) {
             self.ctx.request_repaint();
@@ -60,6 +63,7 @@ impl Drop for VideoWindow {
 pub struct Player {
     engine: IMFMediaEngineEx,
     window: VideoWindow,
+    window_rect: std::cell::Cell<egui::Rect>,
     clicked: Box<AtomicBool>,
     _foundation: Foundation,
     pub path: PathBuf,
@@ -69,6 +73,7 @@ pub struct Player {
     pub seek_preview: Option<f64>,
     error: Arc<AtomicU32>,
     pending_seek: std::cell::Cell<Option<f64>>,
+    first_frame: Arc<AtomicBool>,
 }
 impl Player {
     pub fn new(
@@ -110,10 +115,12 @@ impl Player {
                 (&*clicked as *const AtomicBool) as isize,
             );
             let error = Arc::new(AtomicU32::new(0));
+            let first_frame = Arc::new(AtomicBool::new(false));
             let events: IMFMediaEngineNotify = Events {
                 ctx,
                 visible,
                 error: error.clone(),
+                first_frame: first_frame.clone(),
             }
             .into();
             let factory: IMFMediaEngineClassFactory =
@@ -134,6 +141,7 @@ impl Player {
             Ok(Self {
                 engine,
                 window,
+                window_rect: std::cell::Cell::new(egui::Rect::NOTHING),
                 clicked,
                 _foundation: foundation,
                 bookmarks: crate::bookmarks::load(&path)?,
@@ -143,114 +151,15 @@ impl Player {
                 seek_preview: None,
                 error,
                 pending_seek: std::cell::Cell::new(None),
+                first_frame,
             })
         }
-    }
-    pub fn layout(&self, rect: egui::Rect, pixels: f32, visible: bool) -> Result<()> {
-        self.layout_cropped(rect, pixels, visible, None)
-    }
-    pub fn layout_cropped(
-        &self,
-        rect: egui::Rect,
-        pixels: f32,
-        visible: bool,
-        crop: Option<[f64; 4]>,
-    ) -> Result<()> {
-        if self.duration() > 0.0
-            && let Some(time) = self.pending_seek.take()
-        {
-            self.seek(time)?;
-        }
-        unsafe {
-            if !visible {
-                let _ = ShowWindow(self.window.0, SW_HIDE);
-                return Ok(());
-            }
-            let width = (rect.width() * pixels).round().max(1.0) as i32;
-            let height = (rect.height() * pixels).round().max(1.0) as i32;
-            SetWindowPos(
-                self.window.0,
-                None,
-                (rect.left() * pixels).round() as i32,
-                (rect.top() * pixels).round() as i32,
-                width,
-                height,
-                SWP_NOACTIVATE | SWP_NOZORDER | SWP_SHOWWINDOW,
-            )?;
-            let source = crop.map(|[x, y, w, h]| MFVideoNormalizedRect {
-                left: x as f32,
-                top: y as f32,
-                right: (x + w) as f32,
-                bottom: (y + h) as f32,
-            });
-            if self.duration() <= 0.0 {
-                return Ok(());
-            }
-            let (mut native_w, mut native_h) = (0, 0);
-            let _ = self
-                .engine
-                .GetNativeVideoSize(Some(&mut native_w), Some(&mut native_h));
-            let [_, _, crop_w, crop_h] = crop.unwrap_or([0.0, 0.0, 1.0, 1.0]);
-            let source_w = native_w as f64 * crop_w;
-            let source_h = native_h as f64 * crop_h;
-            let destination = if source_w > 0.0 && source_h > 0.0 {
-                let scale = (width as f64 / source_w).min(height as f64 / source_h);
-                let w = (source_w * scale).round() as i32;
-                let h = (source_h * scale).round() as i32;
-                RECT {
-                    left: (width - w) / 2,
-                    top: (height - h) / 2,
-                    right: (width + w) / 2,
-                    bottom: (height + h) / 2,
-                }
-            } else {
-                RECT {
-                    left: 0,
-                    top: 0,
-                    right: width,
-                    bottom: height,
-                }
-            };
-            self.engine.UpdateVideoStream(
-                source.as_ref().map(|r| r as *const _),
-                Some(&destination),
-                Some(&MFARGB {
-                    rgbAlpha: 255,
-                    rgbRed: 0,
-                    rgbGreen: 0,
-                    rgbBlue: 0,
-                }),
-            )?;
-        }
-        Ok(())
     }
     pub fn take_click(&self) -> bool {
         self.clicked.swap(false, Ordering::Relaxed)
     }
-    pub fn set_occlusion(&self, rect: egui::Rect, pixels: f32, popup: Option<egui::Rect>) {
-        unsafe {
-            let Some(overlap) = popup.map(|r| r.intersect(rect)).filter(|r| r.is_positive()) else {
-                SetWindowRgn(self.window.0, None, true);
-                return;
-            };
-            let full = CreateRectRgn(
-                0,
-                0,
-                (rect.width() * pixels).ceil() as i32,
-                (rect.height() * pixels).ceil() as i32,
-            );
-            let cut = CreateRectRgn(
-                ((overlap.left() - rect.left()) * pixels).floor() as i32,
-                ((overlap.top() - rect.top()) * pixels).floor() as i32,
-                ((overlap.right() - rect.left()) * pixels).ceil() as i32,
-                ((overlap.bottom() - rect.top()) * pixels).ceil() as i32,
-            );
-            CombineRgn(Some(full), Some(full), Some(cut), RGN_DIFF);
-            let _ = DeleteObject(cut.into());
-            if SetWindowRgn(self.window.0, Some(full), true) == 0 {
-                let _ = DeleteObject(full.into());
-            }
-        }
+    pub fn ready(&self) -> bool {
+        self.first_frame.load(Ordering::Acquire)
     }
     pub fn duration(&self) -> f64 {
         let d = unsafe { self.engine.GetDuration() };
@@ -336,7 +245,7 @@ unsafe extern "system" fn video_window_proc(
             return LRESULT(0);
         }
         if matches!(message, WM_KEYDOWN | WM_KEYUP)
-            && wparam.0 == 0x20
+            && matches!(wparam.0, 0x20 | 0x1B | 0x25 | 0x27 | 0x46 | 0x7A)
             && let Ok(parent) = GetParent(hwnd)
         {
             let _ = PostMessageW(Some(parent), message, wparam, lparam);
@@ -404,6 +313,10 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             )
             .unwrap();
+            assert_eq!(
+                GetWindowLongW(player.window.0, GWL_STYLE) as u32 & WS_VISIBLE.0,
+                0
+            );
             player.seek(0.75).unwrap();
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
             while player.position() < 0.85 && std::time::Instant::now() < deadline {
@@ -419,6 +332,14 @@ mod tests {
                 std::thread::sleep(std::time::Duration::from_millis(15));
             }
             assert!(player.error().is_none(), "{:?}", player.error());
+            assert!(
+                player.ready(),
+                "The first decoded frame must be ready before showing video"
+            );
+            assert_ne!(
+                GetWindowLongW(player.window.0, GWL_STYLE) as u32 & WS_VISIBLE.0,
+                0
+            );
             assert!(
                 player.position() >= 0.75,
                 "Deferred start seek did not apply"

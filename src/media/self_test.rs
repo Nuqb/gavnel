@@ -64,6 +64,7 @@ pub fn run() -> Result<()> {
     let project = EditProject::new(vec![segment]);
     let output = directory.path().join("edited.mp4");
     let options = ExportOptions {
+        replace_source: false,
         path: output.clone(),
         height: None,
         size_mb: Some(1.0),

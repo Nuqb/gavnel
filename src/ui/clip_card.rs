@@ -3,6 +3,56 @@ use super::*;
 use crate::library::Clip;
 use egui::{Align, Align2, FontId, Layout, Pos2, Rect, Sense};
 impl Gavnel {
+    fn clip_actions(&mut self, ui: &mut egui::Ui, clip: &Clip, show_open: bool) {
+        if self.saves.status(&clip.path).is_some() {
+            if ui.button(tr("Show saving progress")).clicked() {
+                self.saves.show_for(&clip.path);
+                ui.close();
+            }
+            return;
+        }
+        ui.spacing_mut().button_padding.x += 4.0;
+        if show_open
+            && ui
+                .button(tr(if clip.is_screenshot() {
+                    "Open screenshot"
+                } else {
+                    "Play clip"
+                }))
+                .clicked()
+        {
+            self.open_player(&clip.path);
+            ui.close();
+        }
+        if !clip.is_screenshot() && ui.button(tr("Edit")).clicked() {
+            self.begin_editor(vec![clip.path.clone()]);
+            ui.close();
+        }
+        if ui.button(tr("Rename")).clicked() {
+            self.rename_dialog = Some(super::rename::Dialog::new(&clip.path));
+            ui.close();
+        }
+        if ui.button(tr("Show in folder")).clicked() {
+            let _ = platform::reveal(&clip.path);
+            ui.close();
+        }
+        if super::widgets::destructive_button(
+            ui,
+            tr(if clip.is_screenshot() {
+                "Delete screenshot"
+            } else {
+                "Delete clip"
+            }),
+            false,
+        )
+        .clicked()
+        {
+            self.delete_pending = Some(clip.path.clone());
+            self.delete_error = None;
+            ui.close();
+        }
+    }
+
     pub(super) fn clip_grid(&mut self, ui: &mut egui::Ui, clips: &[Clip]) {
         let gap = 16.0;
         let min = if self.settings.library_compact {
@@ -32,11 +82,13 @@ impl Gavnel {
         }
     }
     pub(super) fn clip_card(&mut self, ui: &mut egui::Ui, clip: &Clip, width: f32) {
+        let saving = self.saves.status(&clip.path);
         let visible = ui.clip_rect().intersects(Rect::from_min_size(
             ui.next_widget_position(),
             Vec2::new(width, width * 9.0 / 16.0 + 78.0),
         ));
         if visible
+            && saving.is_none()
             && !self.textures.contains_key(&clip.path)
             && let Some(image) = self.thumbnails.get(&clip.path)
         {
@@ -120,7 +172,9 @@ impl Gavnel {
                     );
                 }
                 if response.clicked() {
-                    if self.selecting_clips && !clip.is_screenshot() {
+                    if saving.is_some() {
+                        self.saves.show_for(&clip.path);
+                    } else if self.selecting_clips && !clip.is_screenshot() {
                         if let Some(i) = self.montage_selection.iter().position(|p| p == &clip.path)
                         {
                             self.montage_selection.remove(i);
@@ -140,79 +194,20 @@ impl Gavnel {
                     );
                 }
 
-                response.context_menu(|ui| {
-                    ui.spacing_mut().button_padding.x += 4.0;
-                    if ui
-                        .button(if clip.is_screenshot() {
-                            tr("Open screenshot")
-                        } else {
-                            tr("Play clip")
-                        })
-                        .clicked()
-                    {
-                        self.open_player(&clip.path);
-                        ui.close();
-                    }
-                    if !clip.is_screenshot() && ui.button(tr("Edit")).clicked() {
-                        self.begin_editor(vec![clip.path.clone()]);
-                        ui.close();
-                    }
-                    if ui.button(tr("Show in folder")).clicked() {
-                        let _ = platform::reveal(&clip.path);
-                        ui.close();
-                    }
-                    if super::widgets::destructive_button(
-                        ui,
-                        if clip.is_screenshot() {
-                            tr("Delete screenshot")
-                        } else {
-                            tr("Delete clip")
-                        },
-                        false,
-                    )
-                    .clicked()
-                    {
-                        self.delete_pending = Some(clip.path.clone());
-                        self.delete_error = None;
-                        ui.close();
-                    }
-                });
+                response.context_menu(|ui| self.clip_actions(ui, clip, true));
                 egui::Frame::new().inner_margin(12.0).show(ui, |ui| {
                     ui.set_width(width - 24.0);
                     ui.horizontal(|ui| {
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             super::motion::vertical_menu_button(ui, |ui| {
-                                ui.spacing_mut().button_padding.x += 4.0;
-                                if !clip.is_screenshot() && ui.button(tr("Edit")).clicked() {
-                                    self.begin_editor(vec![clip.path.clone()]);
-                                    ui.close();
-                                }
-                                if ui.button(tr("Show in folder")).clicked() {
-                                    let _ = platform::reveal(&clip.path);
-                                    ui.close();
-                                }
-                                if super::widgets::destructive_button(
-                                    ui,
-                                    if clip.is_screenshot() {
-                                        tr("Delete screenshot")
-                                    } else {
-                                        tr("Delete clip")
-                                    },
-                                    false,
-                                )
-                                .clicked()
-                                {
-                                    self.delete_pending = Some(clip.path.clone());
-                                    self.delete_error = None;
-                                    ui.close();
-                                }
+                                self.clip_actions(ui, clip, false);
                             })
                             .response
                             .on_hover_text(tr("Clip actions"));
                             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                                 ui.add(
                                     egui::Label::new(
-                                        RichText::new(&clip.source).size(14.0).strong(),
+                                        RichText::new(clip.title()).size(14.0).strong(),
                                     )
                                     .truncate(),
                                 );
@@ -220,6 +215,18 @@ impl Gavnel {
                         });
                     });
                     ui.add_space(7.0);
+                    if let Some(progress) = &saving {
+                        ui.add(
+                            egui::ProgressBar::new(progress.fraction)
+                                .desired_width(width - 24.0)
+                                .text(format!(
+                                    "{} \u{00b7} {:.0}%",
+                                    tr("Saving"),
+                                    progress.fraction * 100.0
+                                )),
+                        );
+                        return;
+                    }
                     let date: chrono::DateTime<chrono::Local> = clip.modified.into();
                     ui.label(
                         RichText::new(i18n::message(

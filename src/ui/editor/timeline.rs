@@ -10,6 +10,40 @@ fn ruler_step(duration: f64, width: f32) -> f64 {
     .unwrap_or(target)
 }
 impl Editor {
+    pub(super) fn receive_filmstrip(
+        &mut self,
+        context: &egui::Context,
+        id: u64,
+        result: Result<Vec<egui::ColorImage>, String>,
+    ) {
+        let Some((_, path)) = &self.strip_pending else {
+            return;
+        };
+        match result {
+            Ok(images) => {
+                let complete = images.len() == 8;
+                let textures = self.filmstrips.entry(path.clone()).or_default();
+                for (i, image) in images.into_iter().enumerate().skip(textures.len()) {
+                    textures.push(context.load_texture(
+                        format!("timeline-{id}-{i}"),
+                        image,
+                        egui::TextureOptions::LINEAR,
+                    ));
+                }
+                if complete {
+                    self.strip_pending = None;
+                }
+            }
+            Err(error) => {
+                // Retain partial results (or an empty entry) to avoid retrying
+                // a broken source on every paint.
+                self.filmstrips.entry(path.clone()).or_default();
+                self.strip_pending = None;
+                self.error = error;
+            }
+        }
+    }
+
     pub(super) fn request_filmstrip(&mut self, service: &MediaService) {
         let Some(s) = self
             .project
@@ -20,7 +54,6 @@ impl Editor {
         };
         if self.strip_pending.is_some()
             || self.filmstrips.contains_key(&s.info.path)
-            || self.texture.is_none()
             || !s.info.path.is_file()
         {
             return;
@@ -87,7 +120,7 @@ impl Editor {
         ui.painter()
             .rect_filled(lane, 3.0, Color32::from_rgb(42, 44, 50));
         if let Some(frames) = self.filmstrips.get(&s.info.path) {
-            let w = lane.width() / frames.len() as f32;
+            let w = lane.width() / 8.0;
             for (i, frame) in frames.iter().enumerate() {
                 let tile = Rect::from_min_max(
                     egui::pos2(lane.left() + i as f32 * w, lane.top()),

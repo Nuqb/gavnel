@@ -1,4 +1,6 @@
+mod rename;
 use crossbeam_channel::{Sender, bounded};
+pub use rename::rename_capture;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -14,6 +16,19 @@ pub struct Clip {
     pub modified: SystemTime,
 }
 impl Clip {
+    pub fn title(&self) -> &str {
+        let generated_name = self
+            .path
+            .file_stem()
+            .and_then(|stem| legacy_source(&stem.to_string_lossy()))
+            .is_some();
+        if generated_name {
+            &self.source
+        } else {
+            &self.name
+        }
+    }
+
     pub fn is_screenshot(&self) -> bool {
         self.path
             .extension()
@@ -104,6 +119,9 @@ fn scan(folder: &Path) -> Vec<Clip> {
                 continue;
             }
             if kind.is_dir() {
+                if entry.file_name().to_string_lossy().starts_with(".gavnel-") {
+                    continue;
+                }
                 folders.push(path);
                 continue;
             }
@@ -335,5 +353,20 @@ mod tests {
             legacy_source("NBA_2026_2026-11-08_15-00-00_123").unwrap(),
             "NBA 2026"
         );
+    }
+}
+
+#[cfg(test)]
+mod export_visibility_tests {
+    #[test]
+    fn staged_exports_never_appear_as_saved_library_clips() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join("source.mp4"), b"fixture").unwrap();
+        let staging = root.path().join(".gavnel-export-in-progress");
+        std::fs::create_dir(&staging).unwrap();
+        std::fs::write(staging.join("finished.mp4"), b"unfinished").unwrap();
+        let clips = super::scan(root.path());
+        assert_eq!(clips.len(), 1);
+        assert_eq!(clips[0].name, "source");
     }
 }

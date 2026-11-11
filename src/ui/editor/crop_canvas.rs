@@ -79,9 +79,24 @@ impl Editor {
     ) {
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
         ui.painter().rect_filled(rect, 8.0, Color32::BLACK);
+        // Keep an opaque still beneath the native child while its first frame
+        // is being prepared, and while seeking tears the child down.
+        let image = self.texture.as_ref().map(|texture| {
+            let size = texture.resolution_vec2();
+            let factor = (rect.width() / size.x).min(rect.height() / size.y);
+            let image = Rect::from_center_size(rect.center(), size * factor);
+            ui.painter().image(
+                texture.id(),
+                image,
+                Rect::from_min_max(Pos2::ZERO, egui::pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+            image
+        });
         let editing_crop = self.tab == Tab::Crop && player.as_ref().is_none_or(|p| p.paused());
         if !editing_crop
-            && !self.export_open
+            && !self.save_open
+            && !self.saving_overlay
             && let Some(p) = player
         {
             let crop = if self.rendered_playback {
@@ -112,6 +127,9 @@ impl Editor {
             let video_rect = dimensions
                 .map(|(w, h)| fit_video(rect, w, h))
                 .unwrap_or(rect);
+            ui.ctx().data_mut(|data| {
+                data.insert_temp(egui::Id::unique("video-layout-rect"), video_rect)
+            });
             if let Err(e) = p.layout_cropped(video_rect, ui.ctx().pixels_per_point(), true, crop) {
                 self.error = e.to_string();
             }
@@ -120,7 +138,7 @@ impl Editor {
         if let Some(p) = player {
             let _ = p.layout(rect, ui.ctx().pixels_per_point(), false);
         }
-        let Some(texture) = &self.texture else {
+        let Some(image) = image else {
             ui.painter().text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -130,15 +148,6 @@ impl Editor {
             );
             return;
         };
-        let size = texture.resolution_vec2();
-        let factor = (rect.width() / size.x).min(rect.height() / size.y);
-        let image = Rect::from_center_size(rect.center(), size * factor);
-        ui.painter().image(
-            texture.id(),
-            image,
-            Rect::from_min_max(Pos2::ZERO, egui::pos2(1.0, 1.0)),
-            Color32::WHITE,
-        );
         if editing_crop {
             self.crop_overlay(ui, image);
         } else {

@@ -21,13 +21,13 @@ pub(super) fn dimensions(project: &EditProject, options: &ExportOptions) -> (u32
         .clamp(1.0, 60.0) as u32;
     (width, height, fps)
 }
-fn bitrate(project: &EditProject, options: &ExportOptions) -> Result<u64> {
-    if let Some(mb) = options.size_mb {
+fn bitrate(duration: f64, size_mb: Option<f64>) -> Result<u64> {
+    if let Some(mb) = size_mb {
         ensure!(
             mb.is_finite() && (1.0..=10000.0).contains(&mb),
             "Choose a file size between 1 and 10000 MB."
         );
-        let video = mb * 1_000_000.0 * 8.0 * 0.94 / project.duration() - 192_000.0;
+        let video = mb * 1_000_000.0 * 8.0 * 0.94 / duration - 192_000.0;
         ensure!(
             video >= 100_000.0,
             "The file-size limit is too small for this selection. Shorten the video or increase the limit."
@@ -37,6 +37,17 @@ fn bitrate(project: &EditProject, options: &ExportOptions) -> Result<u64> {
         Ok(12_000_000)
     }
 }
+/// Approximate MP4 size at the exporter's requested video/AAC rates, including mux overhead.
+pub fn estimated_size_mb(project: &EditProject, size_mb: Option<f64>) -> Result<f64> {
+    let duration = project.duration();
+    ensure!(
+        duration.is_finite() && duration > 0.0,
+        "Choose a video selection."
+    );
+    let video = bitrate(duration, size_mb)? as f64;
+    Ok(duration * (video + 192_000.0) / 8_000_000.0 * 1.01)
+}
+
 pub(super) fn export(
     project: &EditProject,
     options: &ExportOptions,
@@ -45,20 +56,105 @@ pub(super) fn export(
 ) -> Result<PathBuf> {
     project.validate()?;
     ensure!(
-        !options.path.exists(),
+        options.replace_source || !options.path.exists(),
         "A file with that name already exists. Choose another name."
     );
+    if options.replace_source {
+        let target = std::fs::canonicalize(&options.path)?;
+        ensure!(
+            project.segments.iter().all(|segment| {
+                std::fs::canonicalize(&segment.info.path).is_ok_and(|path| path == target)
+            }),
+            "Save current video requires a single source video."
+        );
+    }
     let parent = options.path.parent().context("Choose an export folder.")?;
     std::fs::create_dir_all(parent)?;
     let staging = tempfile::Builder::new()
         .prefix(".gavnel-export-")
         .tempdir_in(parent)?;
+    let output = staging.path().join("finished.mp4");
+    let copied = super::trim::eligible(project, options)
+        && super::trim::write(project, &output, progress, cancel).is_ok()
+        && super::probe(&output)
+            .is_ok_and(|info| (info.duration - project.duration()).abs() < 0.08);
+    if !copied {
+        ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
+        for extension in ["mp4", "tracks.json"] {
+            let _ = std::fs::remove_file(output.with_extension(extension));
+        }
+        render_frames(project, options, progress, cancel, staging.path())?;
+    }
+    ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
+    let mut offset = 0.0;
+    let mut markers = Vec::new();
+    let mut mapped_events = Vec::new();
+    for s in &project.segments {
+        for time in crate::bookmarks::load(&s.info.path).unwrap_or_default() {
+            if time >= s.start && time <= s.end {
+                markers.push(offset + time - s.start);
+            }
+        }
+        for mut event in crate::highlights::load_events(&s.info.path) {
+            let seconds = event.ticks as f64 / crate::replay::TICKS as f64;
+            if seconds >= s.start && seconds <= s.end {
+                event.ticks = ((offset + seconds - s.start) * crate::replay::TICKS as f64) as u64;
+                mapped_events.push(event);
+            }
+        }
+        offset += s.duration();
+    }
+    for marker in markers {
+        crate::bookmarks::append(&output, marker)?;
+    }
+    crate::highlights::save_events(&output, &mapped_events)?;
+    ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
+    {
+        let mut state = progress.lock().unwrap();
+        state.fraction = 0.98;
+        state.message = "Finishing save".into();
+    }
+    if options.replace_source {
+        super::publish::replace_video(&output, &options.path)?;
+        return Ok(options.path.clone());
+    }
+    let mut sidecars = Vec::new();
+    let published = (|| -> Result<()> {
+        for extension in ["bookmarks", "events.json", "tracks.json"] {
+            let from = output.with_extension(extension);
+            if from.exists() {
+                let to = options.path.with_extension(extension);
+                crate::library::move_without_replacing(&from, &to)?;
+                sidecars.push(to);
+            }
+        }
+        ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
+        crate::library::move_without_replacing(&output, &options.path)
+            .context("Could not save the export. Choose a new filename or folder.")?;
+        Ok(())
+    })();
+    if let Err(error) = published {
+        for sidecar in sidecars {
+            let _ = std::fs::remove_file(sidecar);
+        }
+        return Err(error);
+    }
+    Ok(options.path.clone())
+}
+
+fn render_frames(
+    project: &EditProject,
+    options: &ExportOptions,
+    progress: &Arc<Mutex<JobProgress>>,
+    cancel: &AtomicBool,
+    staging: &Path,
+) -> Result<PathBuf> {
     let dimensions = dimensions(project, options);
-    let initial = bitrate(project, options)?;
+    let initial = bitrate(project.duration(), options.size_mb)?;
     let mut finished = None;
     for attempt in 0..3 {
         let rate = (initial as f64 * 0.8f64.powi(attempt)) as u64;
-        let output = staging.path().join("finished.mp4");
+        let output = staging.join("finished.mp4");
         if output.exists() {
             std::fs::remove_file(&output)?;
         }
@@ -85,49 +181,5 @@ pub(super) fn export(
     let output = finished.context(
         "The export exceeds the requested size. Increase the limit or shorten the selection.",
     )?;
-    ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
-    let mut offset = 0.0;
-    let mut markers = Vec::new();
-    let mut mapped_events = Vec::new();
-    for s in &project.segments {
-        for time in crate::bookmarks::load(&s.info.path).unwrap_or_default() {
-            if time >= s.start && time <= s.end {
-                markers.push(offset + time - s.start);
-            }
-        }
-        for mut event in crate::highlights::load_events(&s.info.path) {
-            let seconds = event.ticks as f64 / crate::replay::TICKS as f64;
-            if seconds >= s.start && seconds <= s.end {
-                event.ticks = ((offset + seconds - s.start) * crate::replay::TICKS as f64) as u64;
-                mapped_events.push(event);
-            }
-        }
-        offset += s.duration();
-    }
-    for marker in markers {
-        crate::bookmarks::append(&output, marker)?;
-    }
-    crate::highlights::save_events(&output, &mapped_events)?;
-    let mut sidecars = Vec::new();
-    let published = (|| -> Result<()> {
-        for extension in ["bookmarks", "events.json"] {
-            let from = output.with_extension(extension);
-            if from.exists() {
-                let to = options.path.with_extension(extension);
-                crate::library::move_without_replacing(&from, &to)?;
-                sidecars.push(to);
-            }
-        }
-        ensure!(!cancel.load(Ordering::Acquire), "Cancelled");
-        crate::library::move_without_replacing(&output, &options.path)
-            .context("Could not save the export. Choose a new filename or folder.")?;
-        Ok(())
-    })();
-    if let Err(error) = published {
-        for sidecar in sidecars {
-            let _ = std::fs::remove_file(sidecar);
-        }
-        return Err(error);
-    }
-    Ok(options.path.clone())
+    Ok(output)
 }

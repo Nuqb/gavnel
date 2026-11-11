@@ -1,6 +1,10 @@
 use super::*;
 impl Gavnel {
     pub(super) fn open_player(&mut self, path: &std::path::Path) {
+        if self.saves.replacing(path) {
+            self.saves.show_for(path);
+            return;
+        }
         if path
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
@@ -20,6 +24,7 @@ impl Gavnel {
             self.visible.clone(),
         ) {
             Ok(player) => {
+                self.player_controls = playback_overlay::Visibility::default();
                 self.player = Some(player);
                 self.page = Page::Player;
                 self.quick_open = false;
@@ -33,21 +38,49 @@ impl Gavnel {
         }
     }
     pub(super) fn playback(&mut self, ui: &mut egui::Ui) {
-        let mut back = false;
+        let mut back = self.playback_shortcuts(ui);
+        if !self.player_fullscreen {
+            back |= self.playback_header(ui);
+            ui.add_space(16.0);
+        }
+        if back {
+            fullscreen(ui.ctx(), &mut self.player_fullscreen, false);
+            self.player = None;
+            self.page = Page::Clips;
+            return;
+        }
+        if self.page != Page::Player {
+            return;
+        }
+        self.playback_surface(ui);
+        ui.ctx().request_repaint_after(Duration::from_millis(100));
+    }
+
+    fn playback_shortcuts(&mut self, ui: &mut egui::Ui) -> bool {
         if !self.quick_open
-            && !ui.ctx().egui_wants_keyboard_input()
-            && let Some(player) = &self.player
+            && self.saves.modal.is_none()
+            && exit_fullscreen_on_escape(ui, &mut self.player_fullscreen)
         {
-            let keys = ui.input_mut(|i| {
-                (
-                    i.consume_key(egui::Modifiers::NONE, egui::Key::Space),
-                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft),
-                    i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight),
-                    i.consume_key(egui::Modifiers::NONE, egui::Key::Escape),
-                )
-            });
-            if keys.0 {
-                let _ = player.toggle();
+            return false;
+        }
+        if self.quick_open || self.saves.modal.is_some() || ui.ctx().egui_wants_keyboard_input() {
+            return false;
+        }
+        let keys = ui.input_mut(|input| {
+            (
+                input.consume_key(egui::Modifiers::NONE, egui::Key::Space),
+                input.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft),
+                input.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight),
+                input.consume_key(egui::Modifiers::NONE, egui::Key::Escape),
+                input.consume_key(egui::Modifiers::NONE, egui::Key::F)
+                    | input.consume_key(egui::Modifiers::NONE, egui::Key::F11),
+            )
+        });
+        if let Some(player) = &self.player {
+            if keys.0
+                && let Err(error) = player.toggle()
+            {
+                self.message = error.to_string();
             }
             if keys.1 {
                 let _ = player.seek(player.position() - 5.0);
@@ -55,11 +88,15 @@ impl Gavnel {
             if keys.2 {
                 let _ = player.seek(player.position() + 5.0);
             }
-            back = keys.3;
         }
+        fullscreen_keys(ui.ctx(), &mut self.player_fullscreen, keys.3, keys.4)
+    }
+
+    fn playback_header(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut back = false;
         let mut edit = None;
         ui.horizontal(|ui| {
-            back |= ui.button(tr("‹  Library")).clicked();
+            back |= super::back_button::show(ui, "Library").clicked();
             if let Some(player) = &self.player {
                 ui.add(
                     egui::Label::new(
@@ -111,159 +148,172 @@ impl Gavnel {
         });
         if let Some(path) = edit {
             self.begin_editor(vec![path]);
-            return;
         }
-        ui.add_space(16.0);
+        back
+    }
+
+    fn playback_surface(&mut self, ui: &mut egui::Ui) {
+        self.take_video_click(ui.ctx());
         let Some(player) = &mut self.player else {
             return;
         };
-        if player.take_click() {
-            let _ = player.toggle();
-            self.quick_open = false;
-            self.clips_open = false;
-            self.long_recording_menu_open = false;
-            if self.clips_capture_owned {
-                self.capturing_hotkey.store(false, Ordering::Relaxed);
-                self.clips_capture_owned = false;
-            }
-            ui.ctx()
-                .data_mut(|data| data.remove::<egui::Rect>(egui::Id::unique("video-popup-rect")));
-        }
-        let size = Vec2::new(
-            ui.available_width(),
-            (ui.available_height()
-                - if player.bookmarks.is_empty() {
-                    56.0
-                } else {
-                    104.0
-                })
-            .max(120.0),
-        );
-        let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
-        ui.painter().rect_filled(rect, 6.0, Color32::BLACK);
+        let size = Vec2::new(ui.available_width(), ui.available_height().max(160.0));
+        let (surface, _) = ui.allocate_exact_size(size, egui::Sense::hover());
+        ui.painter().rect_filled(surface, 8.0, Color32::BLACK);
+        let (video, controls) = surface_rects(surface, &player.bookmarks);
         let error = player.error();
-        if let Err(e) = player.layout(rect, ui.ctx().pixels_per_point(), error.is_none()) {
-            self.message = i18n::message(
-                "Player display failed: {error}",
-                &[("error", &e.to_string())],
-            );
+        ui.ctx()
+            .data_mut(|data| data.insert_temp(egui::Id::unique("video-layout-rect"), video));
+        if let Err(error) = player.layout(
+            video,
+            ui.ctx().pixels_per_point(),
+            error.is_none() && self.saves.modal.is_none(),
+        ) {
+            self.message = error.to_string();
         }
         let popup = ui
             .ctx()
             .data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("video-popup-rect")));
-        player.set_occlusion(rect, ui.ctx().pixels_per_point(), popup);
+        player.set_occlusion(video, ui.ctx().pixels_per_point(), popup);
         if let Some(error) = error {
             ui.painter().text(
-                rect.center(),
+                video.center(),
                 egui::Align2::CENTER_CENTER,
                 error,
                 egui::FontId::proportional(13.0),
                 MUTED,
             );
         }
-        ui.add_space(12.0);
-        let duration = player.duration();
-        let mut position = player
-            .seek_preview
-            .unwrap_or_else(|| player.position())
-            .min(duration);
-        ui.horizontal(|ui| {
-            let (glyph, label) = if player.ended() {
-                (views::Glyph::Refresh, tr("Replay"))
-            } else if player.paused() {
-                (views::Glyph::Play, tr("Play"))
-            } else {
-                (views::Glyph::Pause, tr("Pause"))
-            };
-            if views::icon_button(ui, glyph, TEXT, label).clicked()
-                && let Err(e) = player.toggle()
-            {
-                self.message = e.to_string();
-            }
-            ui.label(format!("{} / {}", time(position), time(duration)));
-            ui.add_enabled_ui(duration > 0.0, |ui| {
-                let width = (ui.available_width() - 145.0).max(80.0);
-                let response =
-                    widgets::playback_slider(ui, &mut position, 0.0..=duration.max(0.01), width);
-                if duration > 0.0 {
-                    let track = response.rect.shrink2(Vec2::new(7.0, 0.0));
-                    for seconds in &player.bookmarks {
-                        let x = track.left()
-                            + track.width() * (seconds / duration).clamp(0.0, 1.0) as f32;
-                        ui.painter().line_segment(
-                            [egui::pos2(x, track.top()), egui::pos2(x, track.bottom())],
-                            egui::Stroke::new(2.0_f32, ACCENT),
-                        );
-                    }
-                }
-                if response.changed() {
-                    player.seek_preview = Some(position);
-                }
-                if (response.drag_stopped() || (response.changed() && !response.dragged()))
-                    && let Some(position) = player.seek_preview.take()
-                    && let Err(e) = player.seek(position)
-                {
-                    self.message = e.to_string();
-                }
-            });
-            if views::icon_button(
-                ui,
-                if player.muted {
-                    views::Glyph::Muted
-                } else {
-                    views::Glyph::Volume
-                },
-                TEXT,
-                if player.muted {
-                    tr("Unmute")
-                } else {
-                    tr("Mute")
-                },
-            )
-            .clicked()
-            {
-                player.muted = !player.muted;
-                let _ = player.audio();
-            }
-            if widgets::playback_slider(ui, &mut player.volume, 0.0..=1.0, 90.0).changed() {
-                let _ = player.audio();
-            }
-        });
-        if !player.bookmarks.is_empty() {
-            egui::ScrollArea::horizontal()
-                .max_height(36.0)
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new(tr("Bookmarks")).color(ACCENT));
-                        for (index, seconds) in player.bookmarks.iter().enumerate() {
-                            if ui
-                                .add_enabled(
-                                    duration > 0.0,
-                                    egui::Button::new(format!(
-                                        "{} · {}",
-                                        index + 1,
-                                        time(*seconds)
-                                    )),
-                                )
-                                .on_hover_text(tr("Jump to this bookmarked moment"))
-                                .clicked()
-                            {
-                                player.seek_preview = None;
-                                if let Err(error) = player.seek(*seconds) {
-                                    self.message = error.to_string();
-                                }
-                            }
-                        }
-                    });
-                });
-        }
-        ui.ctx().request_repaint_after(Duration::from_millis(100));
-        if back {
+        let mut state = playback_controls::State {
+            duration: player.duration(),
+            position: player
+                .seek_preview
+                .unwrap_or_else(|| player.position())
+                .min(player.duration()),
+            volume: player.volume,
+            muted: player.muted,
+            paused: player.paused(),
+            ended: player.ended(),
+            fullscreen: self.player_fullscreen,
+            bookmarks: &player.bookmarks,
+        };
+        let pointer =
+            crate::player::overlay::pointer(self.parent_window, ui.ctx().pixels_per_point())
+                .filter(|point| surface.contains(*point));
+        let visible = self.player_controls.visible(
+            ui.input(|input| input.time),
+            pointer,
+            controls,
+            state.paused || state.ended,
+        ) && player.ready()
+            && self.saves.modal.is_none()
+            && !self.quick_open
+            && !self.clips_open
+            && !self.long_recording_menu_open;
+        let action =
+            playback_overlay::show(ui.ctx(), self.parent_window, controls, &mut state, visible);
+        let audio = (state.volume, state.muted);
+        apply_controls(player, &action, audio, &mut self.message);
+        if action.back {
             self.player = None;
             self.page = Page::Clips;
+            return;
+        }
+        if action.close_requested {
+            self.window_actions.exit();
+        }
+        if let Some(error) = action.error {
+            self.message = error;
+        }
+        if action.toggle_fullscreen {
+            let enabled = !self.player_fullscreen;
+            fullscreen(ui.ctx(), &mut self.player_fullscreen, enabled);
+        }
+    }
+
+    fn take_video_click(&mut self, ctx: &egui::Context) {
+        if self
+            .player
+            .as_ref()
+            .is_none_or(|player| !player.take_click())
+        {
+            return;
+        }
+        if let Some(player) = &self.player {
+            let _ = player.toggle();
+        }
+        self.quick_open = false;
+        self.clips_open = false;
+        self.long_recording_menu_open = false;
+        if self.clips_capture_owned {
+            self.capturing_hotkey.store(false, Ordering::Relaxed);
+            self.clips_capture_owned = false;
+        }
+        ctx.data_mut(|data| data.remove::<egui::Rect>(egui::Id::unique("video-popup-rect")));
+    }
+}
+
+pub(super) fn fullscreen(ctx: &egui::Context, current: &mut bool, enabled: bool) {
+    if *current != enabled {
+        *current = enabled;
+        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(enabled));
+    }
+}
+
+fn exit_fullscreen_on_escape(ui: &mut egui::Ui, current: &mut bool) -> bool {
+    if *current && ui.input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+    {
+        fullscreen(ui.ctx(), current, false);
+        return true;
+    }
+    false
+}
+
+fn fullscreen_keys(ctx: &egui::Context, current: &mut bool, escape: bool, toggle: bool) -> bool {
+    let leave_fullscreen = escape && *current;
+    if leave_fullscreen || toggle {
+        let enabled = !*current && !leave_fullscreen;
+        fullscreen(ctx, current, enabled);
+    }
+    escape && !leave_fullscreen
+}
+
+fn apply_controls(
+    player: &mut crate::player::Player,
+    action: &playback_controls::Action,
+    audio: (f64, bool),
+    message: &mut String,
+) {
+    if action.toggle_play
+        && let Err(error) = player.toggle()
+    {
+        *message = error.to_string();
+    }
+    if action.audio_changed {
+        (player.volume, player.muted) = audio;
+        if let Err(error) = player.audio() {
+            *message = error.to_string();
+        }
+    }
+    if let Some(position) = action.preview {
+        player.seek_preview = Some(position);
+    }
+    if let Some(position) = action.seek {
+        player.seek_preview = None;
+        if let Err(error) = player.seek(position) {
+            *message = error.to_string();
         }
     }
 }
+
+fn surface_rects(surface: egui::Rect, bookmarks: &[f64]) -> (egui::Rect, egui::Rect) {
+    let top = (surface.bottom() - playback_controls::height(bookmarks)).max(surface.top());
+    (
+        surface,
+        egui::Rect::from_min_max(egui::pos2(surface.left(), top), surface.max),
+    )
+}
+
 pub(super) fn time(seconds: f64) -> String {
     let s = seconds.max(0.0) as u64;
     format!("{}:{:02}", s / 60, s % 60)
@@ -286,3 +336,7 @@ fn action_icon(ui: &mut egui::Ui, name: &'static str, svg: &[u8], label: &str) -
     });
     response
 }
+
+#[cfg(test)]
+#[path = "playback_tests.rs"]
+mod tests;

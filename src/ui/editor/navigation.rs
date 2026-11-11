@@ -3,7 +3,6 @@ use super::*;
 #[derive(Clone)]
 pub(super) enum Destination {
     Page(Page, SettingsPage),
-    Project(PathBuf),
     Player(PathBuf),
 }
 
@@ -19,7 +18,19 @@ impl Editor {
         self.project.is_some() && self.project != self.saved_project
     }
 
+    pub(in crate::ui) fn clear_pending_leave(&mut self) {
+        self.leave = None;
+    }
+
+    pub(in crate::ui) fn defer_player(&mut self, path: PathBuf) -> bool {
+        self.defer_leave(Destination::Player(path))
+    }
+
     pub(super) fn defer_leave(&mut self, destination: Destination) -> bool {
+        if self.saving_video.is_some() {
+            self.leave = None;
+            return false;
+        }
         if !self.dirty() {
             return false;
         }
@@ -33,26 +44,6 @@ impl Editor {
         true
     }
 
-    pub(super) fn open_project(&mut self, destination: Destination) {
-        let Destination::Project(path) = destination else {
-            return;
-        };
-        match EditProject::load(&path) {
-            Ok(project) => {
-                let mut next = Self::new(self.folder.clone());
-                next.return_player = self.return_player.clone();
-                next.id = self.id.wrapping_add(1);
-                next.frame_id = next.id;
-                next.saved_project = Some(project.clone());
-                next.project = Some(project);
-                next.loading = false;
-                next.project_path = path.to_string_lossy().into_owned();
-                *self = next;
-            }
-            Err(error) => self.error = error.to_string(),
-        }
-    }
-
     fn resolve_leave(&mut self, choice: Choice) -> Option<Destination> {
         self.leave.as_ref()?;
         match choice {
@@ -60,7 +51,11 @@ impl Editor {
                 self.leave = None;
                 return None;
             }
-            Choice::Save if !self.save_project() => return None,
+            Choice::Save => {
+                self.save_editing = false;
+                self.save_open = true;
+                return None;
+            }
             Choice::Discard => {
                 self.project = self.saved_project.clone();
                 self.undo.clear();
@@ -68,7 +63,6 @@ impl Editor {
                 self.pending = None;
                 self.last_frame = None;
             }
-            Choice::Save => {}
         }
         self.leave.take()
     }
@@ -105,17 +99,24 @@ impl Gavnel {
             return;
         };
         self.player = None;
-        let Some(choice) = leave_dialog(ctx, &editor.error) else {
+        if editor.save_open || editor.saving_video.is_some() {
             return;
+        }
+        let destination = if editor.dirty() {
+            let Some(choice) = leave_dialog(ctx, &editor.error) else {
+                return;
+            };
+            editor.resolve_leave(choice)
+        } else {
+            editor.leave.take()
         };
-        if let Some(destination) = editor.resolve_leave(choice) {
+        if let Some(destination) = destination {
             match destination {
                 Destination::Page(page, settings_page) => {
                     self.page = page;
                     self.settings_page = settings_page;
                 }
                 Destination::Player(path) => self.open_player(&path),
-                project => editor.open_project(project),
             }
         }
     }
@@ -173,6 +174,14 @@ mod tests {
     }
 
     #[test]
+    fn saving_video_can_leave_the_editor_without_a_discard_prompt() {
+        let mut editor = edited();
+        editor.saving_video = Some(Arc::new(Mutex::new(JobProgress::default())));
+        assert!(!editor.defer_leave(Destination::Page(Page::Clips, SettingsPage::Recording)));
+        assert!(editor.leave.is_none());
+    }
+
+    #[test]
     fn discard_and_cancel_do_not_save() {
         let mut editor = edited();
         assert!(editor.defer_leave(Destination::Page(Page::Clips, SettingsPage::Recording)));
@@ -195,13 +204,14 @@ mod tests {
     }
 
     #[test]
-    fn failed_save_keeps_changes_and_pending_destination() {
+    fn save_opens_video_choices_and_keeps_pending_destination() {
         let mut editor = edited();
         editor.defer_leave(Destination::Page(Page::Clips, SettingsPage::Recording));
         assert!(editor.resolve_leave(Choice::Save).is_none());
         assert!(editor.dirty());
         assert!(editor.leave.is_some());
-        assert!(!editor.error.is_empty());
+        assert!(editor.save_open);
+        assert!(editor.error.is_empty());
     }
 }
 
@@ -209,36 +219,19 @@ mod tests {
 mod persistence_tests {
     use super::*;
     #[test]
-    fn save_then_discard_preserves_the_saved_file_and_drop_never_autosaves() {
+    fn save_choice_and_drop_never_create_project_files() {
         let dir = tempfile::tempdir().unwrap();
-        let source = dir.path().join("source.mp4");
-        std::fs::write(&source, b"fixture").unwrap();
-        let info = crate::media::MediaInfo {
-            path: source,
-            duration: 10.0,
-            width: 1920,
-            height: 1080,
-            fps: 60.0,
-            audio: vec![],
-            markers: vec![],
-        };
-        let path = dir.path().join("saved.gavnel-project");
         let mut editor = Editor::new(dir.path().to_owned());
-        editor.project = Some(EditProject::new(vec![crate::media::ClipSegment::new(info)]));
-        editor.saved_project = editor.project.clone();
-        editor.project_path = path.to_string_lossy().into_owned();
-        editor.project.as_mut().unwrap().name = "Saved edit".into();
+        let original = EditProject::new(vec![]);
+        editor.saved_project = Some(original.clone());
+        editor.project = Some(original);
+        editor.project.as_mut().unwrap().name = "Edited".into();
         editor.defer_leave(Destination::Page(Page::Clips, SettingsPage::Recording));
-        assert!(editor.resolve_leave(Choice::Save).is_some());
-        assert!(!editor.dirty());
-        let saved = std::fs::read(&path).unwrap();
-        editor.project.as_mut().unwrap().segments[0].start = 2.0;
-        editor.defer_leave(Destination::Project(path.clone()));
-        assert!(editor.resolve_leave(Choice::Discard).is_some());
-        assert_eq!(editor.project.as_ref().unwrap().segments[0].start, 0.0);
-        editor.project.as_mut().unwrap().name = "Unsaved on drop".into();
+        assert!(editor.resolve_leave(Choice::Save).is_none());
+        assert!(editor.save_open);
+        assert!(editor.dirty());
         drop(editor);
-        assert_eq!(std::fs::read(path).unwrap(), saved);
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
     }
 
     #[test]

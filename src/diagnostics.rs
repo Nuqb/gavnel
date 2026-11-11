@@ -2,6 +2,12 @@
 mod self_test;
 use crate::{audio, audio_check, branding, config, motion_test, sources, verify, video};
 pub fn early(args: &[String]) -> anyhow::Result<bool> {
+    #[cfg(debug_assertions)]
+    if args.iter().any(|arg| arg == "--validate-player-overlay") {
+        crate::ui::validate_player_overlay()?;
+        println!("Transparent player overlay and native window ownership passed.");
+        return Ok(true);
+    }
     if args.iter().any(|arg| arg == "--editor-self-test") {
         crate::media::self_test()?;
         println!("Native editor inspection, previews, audio mixing, and export passed.");

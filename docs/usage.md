@@ -117,17 +117,32 @@ Use **Play** or **Space** to play/pause from the playhead. Playback is available
 immediately; changed audio mixes prepare an edited playback file in the background.
 The timeline shows video thumbnails, time marks, bookmarks, and draggable trim
 handles. Click or drag the timeline to seek. Edited playback files are cached locally.
-**Export** creates a new H.264/AAC MP4, with optional resolution and file-size limits.
-Originals are preserved. One export can run with one more queued; Cancel removes
-unfinished export files. Editing and exports use Windows Media Foundation inside
-Gavnel, with no FFmpeg installation or separate editing-tool download. Exports
-use Windows H.264/AAC encoding; recording continues to use NVIDIA NVENC, and export
-speed can differ from recording speed.
+Choose **Save video**, then **Save current video** to replace the source or
+**Save as new video** to preserve it and create a new MP4. Combined videos must
+be saved as a new video. The save dialog offers resolution and file-size settings.
+Compatible trims copy compressed media; other edits use Windows Media Foundation
+for H.264/AAC rendering, with no separate editing-tool download. Recording uses
+NVIDIA NVENC, so save and recording speeds can differ.
 
-Save reusable edits with **Save project**. Projects reference original videos;
-keep those videos available. Leaving with unsaved edits asks you to
-**Save**, **Discard**, or **Cancel**. **Open project** is available
-in the Library.
+Saves can continue in the background. Open progress again from the library, or
+choose **View** after completion to open the result. Cancel removes unfinished
+outputs, and a failed replacement preserves the original video. Active saves
+block conflicting capture changes and app exit until they finish or are cancelled.
+Leaving with unsaved edits asks you to **Save**, **Discard**, or **Cancel**;
+Save opens the video-saving dialog.
+
+Use a capture's **Rename** action to change its filename while keeping its
+bookmarks, highlights, and audio-track metadata together.
+
+## Window and playback controls
+
+Use the top-right buttons to minimize, maximize/restore, or close Gavnel. Drag the
+empty header space beside the recording controls to move the window; double-click
+it to maximize or restore. Resize from the edges or corners.
+
+The player timeline stays attached to the main window. Use its fullscreen button,
+**F**, or **F11** to toggle fullscreen playback; **Escape** leaves fullscreen
+before returning to the library.
 
 ## Audio from applications
 

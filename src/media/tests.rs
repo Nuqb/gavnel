@@ -29,7 +29,10 @@ fn native_editing_preserves_sources_mixes_audio_and_maps_markers() {
             .collect::<Vec<_>>(),
         ["Game", "Microphone"]
     );
-    let strips = filmstrip(&source).unwrap();
+    let mut batches = Vec::new();
+    let strips =
+        frames::filmstrip_progressive(&source, |images| batches.push(images.len())).unwrap();
+    assert_eq!(batches, (1..=8).collect::<Vec<_>>());
     assert_ne!(strips[0].pixels(), strips[7].pixels());
     // The top and bottom colors differ, exposing upside-down RGB buffers.
     let image = frame(&source, 0.5).unwrap();
@@ -60,6 +63,7 @@ fn native_editing_preserves_sources_mixes_audio_and_maps_markers() {
     assert_eq!(EditProject::load(&saved).unwrap(), project);
     let output = directory.path().join("edited.mp4");
     let options = ExportOptions {
+        replace_source: false,
         path: output.clone(),
         height: Some(720),
         size_mb: Some(1.0),
@@ -112,6 +116,7 @@ fn native_editing_preserves_sources_mixes_audio_and_maps_markers() {
     );
     assert!(render::export(&project, &options, &progress, &cancel).is_err());
     let cancelled = ExportOptions {
+        replace_source: false,
         path: directory.path().join("cancelled.mp4"),
         ..options
     };
@@ -166,4 +171,187 @@ fn native_decoder_preserves_visible_edges_with_macroblock_padding() {
     assert_eq!(image.resolution(), [54, 54]);
     assert!(image.pixels()[0].r() > 180);
     assert!(image.pixels()[53 * 54].b() > 180);
+}
+
+#[test]
+fn save_current_video_replaces_source_and_cancellation_preserves_it() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("current.mp4");
+    self_test::fixture(&source, true).unwrap();
+    crate::bookmarks::append(&source, 0.8).unwrap();
+    let original = std::fs::read(&source).unwrap();
+    let mut segment = ClipSegment::new(probe(&source).unwrap());
+    segment.start = 0.5;
+    segment.end = 1.5;
+    let project = EditProject::new(vec![segment]);
+    let options = ExportOptions {
+        replace_source: true,
+        path: source.clone(),
+        height: None,
+        size_mb: None,
+        canvas: None,
+    };
+    let progress = Arc::new(Mutex::new(JobProgress::default()));
+    assert!(render::export(&project, &options, &progress, &AtomicBool::new(true)).is_err());
+    assert_eq!(std::fs::read(&source).unwrap(), original);
+    assert_eq!(crate::bookmarks::load(&source).unwrap(), vec![0.8]);
+    render::export(&project, &options, &progress, &AtomicBool::new(false)).unwrap();
+    assert!((probe(&source).unwrap().duration - 1.0).abs() < 0.15);
+    assert_ne!(std::fs::read(&source).unwrap(), original);
+    assert!((crate::bookmarks::load(&source).unwrap()[0] - 0.3).abs() < 0.001);
+    assert!(!source.with_extension("tracks.json").exists());
+    assert!(!std::fs::read_dir(directory.path()).unwrap().any(|entry| {
+        entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".gavnel-export-")
+    }));
+    let other = directory.path().join("other.mp4");
+    std::fs::write(&other, b"unrelated").unwrap();
+    let options = ExportOptions {
+        path: other.clone(),
+        ..options
+    };
+    assert!(render::export(&project, &options, &progress, &AtomicBool::new(false)).is_err());
+    assert_eq!(std::fs::read(other).unwrap(), b"unrelated");
+}
+
+#[test]
+fn export_size_estimate_tracks_duration_and_selected_budget() {
+    let info = MediaInfo {
+        path: PathBuf::from("example.mp4"),
+        duration: 40.0,
+        width: 1920,
+        height: 1080,
+        fps: 60.0,
+        audio: vec![],
+        markers: vec![],
+    };
+    let mut project = EditProject::new(vec![ClipSegment::new(info)]);
+    let automatic = estimated_size_mb(&project, None).unwrap();
+    assert!((60.0..63.0).contains(&automatic));
+    let limited = estimated_size_mb(&project, Some(25.0)).unwrap();
+    assert!((23.0..25.0).contains(&limited));
+    project.segments[0].end = 20.0;
+    assert!((estimated_size_mb(&project, None).unwrap() - automatic / 2.0).abs() < 0.001);
+    assert!(estimated_size_mb(&project, Some(0.0)).is_err());
+}
+
+#[test]
+fn compressed_trim_preserves_frames_audio_and_exact_visible_duration() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("source.mp4");
+    self_test::fixture(&source, true).unwrap();
+    let mut segment = ClipSegment::new(probe(&source).unwrap());
+    segment.start = 0.0;
+    segment.end = 1.0;
+    let project = EditProject::new(vec![segment]);
+    let output = directory.path().join("copied.mp4");
+    let progress = Arc::new(Mutex::new(JobProgress::default()));
+    let started = std::time::Instant::now();
+    trim::write(&project, &output, &progress, &AtomicBool::new(false)).unwrap();
+    let copy_elapsed = started.elapsed();
+    let info = probe(&output).unwrap();
+    assert!((info.duration - 1.0).abs() < 0.04, "{}", info.duration);
+    assert_eq!(info.audio, project.segments[0].info.audio);
+    for time in [0.0, 0.4, 0.9] {
+        let actual = frame(&output, time).unwrap();
+        let expected = frame(&source, time).unwrap();
+        let error = actual
+            .pixels()
+            .iter()
+            .zip(expected.pixels())
+            .map(|(a, b)| (a.r() as f64 - b.r() as f64).abs())
+            .sum::<f64>()
+            / actual.pixels().len() as f64;
+        assert!(error < 4.0, "Trim frame at {time} is wrong: {error}");
+    }
+    let rendered = directory.path().join("rendered.mp4");
+    let started = std::time::Instant::now();
+    composition::Render {
+        project: &project,
+        dimensions: (160, 96, 24),
+        bitrate: 12_000_000,
+        progress: &progress,
+        cancel: &AtomicBool::new(false),
+    }
+    .write(&rendered)
+    .unwrap();
+    eprintln!(
+        "Trim benchmark (160x96, 1s selection): copy={copy_elapsed:?}, render={:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn fast_trim_supports_new_and_current_video_and_falls_back_for_non_keyframes() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("source.mp4");
+    self_test::fixture(&source, false).unwrap();
+    let original = std::fs::read(&source).unwrap();
+    let mut segment = ClipSegment::new(probe(&source).unwrap());
+    segment.end = 1.0;
+    let mut project = EditProject::new(vec![segment]);
+    let output = directory.path().join("new.mp4");
+    let options = ExportOptions {
+        path: output.clone(),
+        replace_source: false,
+        height: None,
+        size_mb: None,
+        canvas: None,
+    };
+    let progress = Arc::new(Mutex::new(JobProgress::default()));
+    render::export(&project, &options, &progress, &AtomicBool::new(false)).unwrap();
+    assert_eq!(std::fs::read(&source).unwrap(), original);
+    let samples = |path: &Path| {
+        let file = std::fs::File::open(path).unwrap();
+        let size = file.metadata().unwrap().len();
+        let mut reader = mp4::Mp4Reader::read_header(std::io::BufReader::new(file), size).unwrap();
+        reader.read_sample(1, 1).unwrap().unwrap().bytes
+    };
+    assert_eq!(
+        samples(&source),
+        samples(&output),
+        "Fast trim must preserve compressed video bytes"
+    );
+    project.segments[0].start = 0.5;
+    project.segments[0].end = 1.5;
+    assert!(
+        trim::write(
+            &project,
+            &directory.path().join("unsafe.mp4"),
+            &progress,
+            &AtomicBool::new(false)
+        )
+        .is_err()
+    );
+    let fallback = ExportOptions {
+        path: directory.path().join("exact.mp4"),
+        ..options.clone()
+    };
+    render::export(&project, &fallback, &progress, &AtomicBool::new(false)).unwrap();
+    let expected = frame(&source, 0.5).unwrap();
+    let actual = frame(&fallback.path, 0.0).unwrap();
+    let error = expected
+        .pixels()
+        .iter()
+        .zip(actual.pixels())
+        .map(|(a, b)| (a.r() as f64 - b.r() as f64).abs())
+        .sum::<f64>()
+        / actual.pixels().len() as f64;
+    assert!(
+        error < 6.0,
+        "Exact fallback trim changed its start frame: {error}"
+    );
+    project.segments[0].start = 0.0;
+    project.segments[0].end = 0.5;
+    let replacement = ExportOptions {
+        path: source.clone(),
+        replace_source: true,
+        ..options
+    };
+    render::export(&project, &replacement, &progress, &AtomicBool::new(false)).unwrap();
+    assert!((probe(&source).unwrap().duration - 0.5).abs() < 0.04);
+    assert_eq!(samples(&source), samples(&output));
 }

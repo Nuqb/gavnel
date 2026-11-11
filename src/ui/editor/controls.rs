@@ -88,6 +88,7 @@ impl Editor {
                         egui::DragValue::new(&mut s.start)
                             .range(0.0..=(s.end - 1.0 / s.info.fps).max(0.0))
                             .speed(0.05)
+                            .fixed_decimals(2)
                             .suffix(" s"),
                     );
                     columns[1].label(tr("End"));
@@ -95,6 +96,7 @@ impl Editor {
                         egui::DragValue::new(&mut s.end)
                             .range((s.start + 1.0 / s.info.fps)..=s.info.duration)
                             .speed(0.05)
+                            .fixed_decimals(2)
                             .suffix(" s"),
                     );
                 });
@@ -197,135 +199,6 @@ impl Editor {
                     }
                 }
             }
-        }
-    }
-    pub(super) fn export_dialog(&mut self, ui: &mut egui::Ui, service: &MediaService) {
-        if !self.export_open {
-            return;
-        }
-        let mut open = true;
-        egui::Window::new(tr("Export video"))
-            .collapsible(false)
-            .resizable(false)
-            .open(&mut open)
-            .show(ui.ctx(), |ui| {
-                ui.label(tr("Filename"));
-                ui.text_edit_singleline(&mut self.filename);
-                ui.horizontal(|ui| {
-                    ui.label(tr("Folder"));
-                    if ui.button(self.folder.display().to_string()).clicked() {
-                        match platform::choose_clip_folder(&self.folder) {
-                            Ok(Some(p)) => self.folder = p,
-                            Ok(None) => {}
-                            Err(e) => self.error = e.to_string(),
-                        }
-                    }
-                });
-                ui.horizontal(|ui| {
-                    ui.label(tr("Resolution"));
-                    for (height, label) in [
-                        (None, "Original"),
-                        (Some(1080), "1080p"),
-                        (Some(720), "720p"),
-                    ] {
-                        ui.selectable_value(&mut self.height, height, tr(label));
-                    }
-                });
-                ui.horizontal(|ui| {
-                    ui.label(tr("File size"));
-                    super::super::motion::ComboBox::from_id_salt("export-size")
-                        .selected_text(
-                            self.size_mb
-                                .map(|s| format!("{s:.0} MB"))
-                                .unwrap_or_else(|| tr("No limit").into()),
-                        )
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.size_mb, None, tr("No limit"));
-                            for size in [10.0, 25.0, 50.0, 100.0] {
-                                ui.selectable_value(
-                                    &mut self.size_mb,
-                                    Some(size),
-                                    format!("{size:.0} MB"),
-                                );
-                            }
-                            if ui.selectable_label(false, tr("Custom")).clicked() {
-                                self.size_mb = Some(25.0);
-                            }
-                        });
-                    if let Some(size) = &mut self.size_mb {
-                        ui.add(
-                            egui::DragValue::new(size)
-                                .range(1.0..=10000.0)
-                                .suffix(" MB"),
-                        );
-                    }
-                });
-                if let Some(project) = &self.project {
-                    if let Some(first) = project.segments.first() {
-                        ui.label(format!(
-                            "{}  ·  {}",
-                            first.crop.aspect.label(),
-                            playback::time(project.duration())
-                        ));
-                    }
-                    if views::orange_button(ui, tr("Export")).clicked() {
-                        let name = self.filename.trim();
-                        if name.is_empty()
-                            || name.contains(['/', '\\', ':'])
-                            || !name.to_ascii_lowercase().ends_with(".mp4")
-                        {
-                            self.error = "Choose an MP4 filename without folder separators.".into();
-                        } else {
-                            match service.export(
-                                project.clone(),
-                                ExportOptions {
-                                    path: self.folder.join(name),
-                                    height: self.height,
-                                    size_mb: self.size_mb,
-                                    canvas: None,
-                                },
-                            ) {
-                                Ok(job) => {
-                                    self.jobs.push(job);
-                                    self.export_open = false;
-                                }
-                                Err(e) => self.error = e.to_string(),
-                            }
-                        }
-                    }
-                }
-            });
-        self.export_open &= open;
-    }
-    pub(super) fn job_status(&mut self, ui: &mut egui::Ui) {
-        for (index, (state, cancel)) in self.jobs.iter().enumerate() {
-            let p = state.lock().unwrap().clone();
-            ui.push_id(index, |ui| {
-                ui.horizontal(|ui| {
-                    if let Some(result) = p.result {
-                        match result {
-                            Ok(path) => {
-                                ui.label(tr("Export complete"));
-                                if ui.button(tr("Show in folder")).clicked() {
-                                    let _ = platform::reveal(&path);
-                                }
-                            }
-                            Err(e) => {
-                                ui.colored_label(DANGER, e);
-                            }
-                        }
-                    } else {
-                        ui.add(
-                            egui::ProgressBar::new(p.fraction)
-                                .desired_width(240.0)
-                                .text(tr(&p.message)),
-                        );
-                        if ui.button(tr("Cancel")).clicked() {
-                            cancel.store(true, Ordering::Release);
-                        }
-                    }
-                });
-            });
         }
     }
 }

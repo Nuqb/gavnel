@@ -18,9 +18,10 @@ impl Writer {
         let runtime = Runtime::new()?;
         unsafe {
             let mut attributes = None;
-            MFCreateAttributes(&mut attributes, 1)?;
+            MFCreateAttributes(&mut attributes, 2)?;
             let attributes = attributes.unwrap();
             attributes.SetUINT32(&MF_SINK_WRITER_DISABLE_THROTTLING, 1)?;
+            attributes.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1)?;
             let path = std::path::absolute(path)?;
             let sink = MFCreateSinkWriterFromURL(PCWSTR(wide(&path).as_ptr()), None, &attributes)?;
             let video = add_video(&sink, dimensions, bitrate)?;

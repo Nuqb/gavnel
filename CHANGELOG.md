@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.3.6
+
+- Integrated minimize, maximize/restore, and close buttons into the app, with draggable header space, double-click maximize/restore, and edge resizing.
+- Attached playback controls and the timeline to the main window so they follow window movement and transitions together.
+- Added fullscreen playback, refined seek and volume controls, and consistent back buttons.
+- Replaced project-file actions with a video-saving dialog offering current-video replacement or a new MP4, resolution choices, and file-size controls.
+- Added background saving, progress and completion notices, and protection against exiting or modifying captures while saves are active.
+- Added safe capture renaming that preserves bookmarks, highlights, and audio-track metadata.
+- Added compressed-copy trims for compatible selections, safer staged exports and replacement recovery, and progressive timeline thumbnails.
+- Updated the quick launcher to load completed builds through the normal graceful-restart path when an older build is running.
+
 ## 0.3.5
 
 - Added a single release command with shared checks, optimized build caching, verified automatic publication, and recovery from interrupted publishing.

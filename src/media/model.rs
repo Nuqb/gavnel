@@ -1,6 +1,8 @@
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+#[cfg(test)]
+use std::path::Path;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AudioTrack {
@@ -231,6 +233,7 @@ impl EditProject {
         }
         Ok(())
     }
+    #[cfg(test)]
     pub fn save(&self, path: &Path) -> Result<()> {
         self.validate()?;
         ensure!(
@@ -252,6 +255,7 @@ impl EditProject {
         }
         Ok(())
     }
+    #[cfg(test)]
     pub fn load(path: &Path) -> Result<Self> {
         let project: Self = serde_json::from_slice(&std::fs::read(path)?)?;
         project.validate()?;
@@ -260,6 +264,7 @@ impl EditProject {
 }
 #[derive(Clone, Debug)]
 pub struct ExportOptions {
+    pub replace_source: bool,
     pub path: PathBuf,
     pub height: Option<u32>,
     pub size_mb: Option<f64>,

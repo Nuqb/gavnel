@@ -10,7 +10,18 @@ try {
     if ($hash -notmatch '^[A-Fa-f0-9]{64}$') { throw 'The completed build reference is invalid. Run the original Gavnel shortcut to repair it.' }
     $app = Join-Path $projectRoot "target\launcher\runs\$hash\Gavnel.exe"
     if (-not (Test-Path -LiteralPath $app)) { throw 'The completed build is missing. Run the original Gavnel shortcut to rebuild it.' }
-    # A second instance asks the existing app to show itself. Never interrupt a recorder.
+    # An older instance would absorb the show request and hide the updated build.
+    # Use the normal launcher to request a graceful exit and wait for recordings to save.
+    $older = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.ProcessName -like '*gavnel*' -and $_.Path -and
+        $_.Path.StartsWith($projectRoot + '\', [StringComparison]::OrdinalIgnoreCase) -and
+        $_.Path -ne $app
+    })
+    if ($older.Count -gt 0) {
+        & (Join-Path $PSScriptRoot 'launch.ps1')
+        exit $LASTEXITCODE
+    }
+    # A second instance asks the current build to show itself.
     $launched = Start-Process -FilePath $app -WorkingDirectory $projectRoot -WindowStyle Normal -PassThru
     if ($launched.WaitForExit(1500) -and $launched.ExitCode -ne 0) {
         throw "Gavnel exited during startup (code $($launched.ExitCode))."

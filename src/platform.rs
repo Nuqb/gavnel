@@ -13,6 +13,7 @@ pub struct WindowActions {
     ctx: eframe::egui::Context,
     visible: std::sync::Arc<std::sync::atomic::AtomicBool>,
     quitting: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    exit_blocked: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 impl WindowActions {
     pub fn new(
@@ -26,6 +27,7 @@ impl WindowActions {
             ctx,
             visible,
             quitting,
+            exit_blocked: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
     pub fn show(&self) {
@@ -53,12 +55,20 @@ impl WindowActions {
             .send_viewport_cmd(eframe::egui::ViewportCommand::Visible(false));
         self.ctx.request_repaint();
     }
+    pub fn set_exit_blocked(&self, blocked: bool) {
+        self.exit_blocked
+            .store(blocked, std::sync::atomic::Ordering::Release);
+    }
     pub fn exit(&self) {
         use std::sync::atomic::Ordering;
         use windows::Win32::{
             Foundation::{LPARAM, WPARAM},
             UI::WindowsAndMessaging::*,
         };
+        if self.exit_blocked.load(Ordering::Acquire) {
+            self.show();
+            return;
+        }
         self.quitting.store(true, Ordering::Release);
         self.visible.store(true, Ordering::Release);
         // A native close event wakes the event loop even when no frame has
@@ -488,29 +498,11 @@ fn startup_command(exe: &Path, launcher: &Path) -> String {
     }
 }
 
-/// Project picker uses the native Windows dialog without changing the working directory.
-pub fn choose_project() -> Result<Option<std::path::PathBuf>> {
-    use windows::Win32::{
-        System::Com::*,
-        UI::{Input::KeyboardAndMouse::GetActiveWindow, Shell::*},
-    };
-    unsafe {
-        let dialog: IFileOpenDialog =
-            CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
-        dialog.SetOptions(FOS_FORCEFILESYSTEM | FOS_FILEMUSTEXIST | FOS_NOCHANGEDIR)?;
-        match dialog.Show(Some(GetActiveWindow())) {
-            Err(e) if e.code() == windows::core::HRESULT::from_win32(1223) => return Ok(None),
-            Err(e) => return Err(e.into()),
-            Ok(()) => {}
-        }
-        let name = dialog.GetResult()?.GetDisplayName(SIGDN_FILESYSPATH)?;
-        let path = name.to_string();
-        CoTaskMemFree(Some(name.0 as _));
-        Ok(Some(std::path::PathBuf::from(path?)))
-    }
+pub fn save_video(initial: &Path) -> Result<Option<std::path::PathBuf>> {
+    save_file(initial, "mp4")
 }
 
-pub fn save_project(initial: &Path) -> Result<Option<std::path::PathBuf>> {
+fn save_file(initial: &Path, extension: &str) -> Result<Option<std::path::PathBuf>> {
     use windows::Win32::{
         System::Com::*,
         UI::{Input::KeyboardAndMouse::GetActiveWindow, Shell::*},
@@ -529,7 +521,18 @@ pub fn save_project(initial: &Path) -> Result<Option<std::path::PathBuf>> {
             .chain(Some(0))
             .collect();
         dialog.SetFileName(PCWSTR(name.as_ptr()))?;
-        dialog.SetDefaultExtension(w!("gavnel-project"))?;
+        let extension: Vec<u16> = extension.encode_utf16().chain(Some(0)).collect();
+        dialog.SetDefaultExtension(PCWSTR(extension.as_ptr()))?;
+        if let Some(parent) = initial.parent().filter(|p| p.is_dir()) {
+            let folder: Vec<u16> = parent
+                .as_os_str()
+                .to_string_lossy()
+                .encode_utf16()
+                .chain(Some(0))
+                .collect();
+            let item: IShellItem = SHCreateItemFromParsingName(PCWSTR(folder.as_ptr()), None)?;
+            dialog.SetFolder(&item)?;
+        }
         match dialog.Show(Some(GetActiveWindow())) {
             Err(e) if e.code() == windows::core::HRESULT::from_win32(1223) => return Ok(None),
             Err(e) => return Err(e.into()),
@@ -603,6 +606,43 @@ mod tests {
         assert!(!commands.contains(&ViewportCommand::Visible(false)));
         assert!(!commands.contains(&ViewportCommand::Focus));
     }
+    #[test]
+    fn active_video_save_blocks_tray_and_launcher_exit_until_complete() {
+        use eframe::egui::{Context, ViewportCommand, ViewportId};
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        };
+        let ctx = Context::default();
+        let quitting = Arc::new(AtomicBool::new(false));
+        let actions = WindowActions::new(
+            HWND::default(),
+            ctx.clone(),
+            Arc::new(AtomicBool::new(false)),
+            quitting.clone(),
+        );
+        actions.set_exit_blocked(true);
+        actions.clone().exit();
+        let mut output = ctx.run_pass(Default::default(), |_| {});
+        output.textures_delta.clear();
+        assert!(!quitting.load(Ordering::Acquire));
+        assert!(
+            !output.viewport_output[&ViewportId::ROOT]
+                .commands
+                .contains(&ViewportCommand::Close)
+        );
+        actions.set_exit_blocked(false);
+        actions.exit();
+        let mut output = ctx.run_pass(Default::default(), |_| {});
+        output.textures_delta.clear();
+        assert!(quitting.load(Ordering::Acquire));
+        assert!(
+            output.viewport_output[&ViewportId::ROOT]
+                .commands
+                .contains(&ViewportCommand::Close)
+        );
+    }
+
     #[test]
     fn folder_validation_checks_writability_without_leaving_files() {
         let folder = tempfile::tempdir().unwrap();

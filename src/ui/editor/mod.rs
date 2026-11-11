@@ -2,7 +2,10 @@ mod body;
 mod buttons;
 mod controls;
 mod crop_canvas;
+mod header;
 mod navigation;
+mod save;
+mod save_dialog;
 #[cfg(test)]
 mod tests;
 mod timeline;
@@ -36,14 +39,16 @@ pub(super) struct Editor {
     play_requested: bool,
     rendered_playback: bool,
     error: String,
-    export_open: bool,
+    save_open: bool,
+    saving_overlay: bool,
+    saving_video: Option<Arc<Mutex<JobProgress>>>,
     folder: PathBuf,
     filename: String,
     height: Option<u32>,
     size_mb: Option<f64>,
-    jobs: Vec<(Arc<Mutex<JobProgress>>, Arc<AtomicBool>)>,
+    pub(in crate::ui) pending_save: Option<super::saving::Job>,
     preview_job: Option<(Arc<Mutex<JobProgress>>, Arc<AtomicBool>)>,
-    project_path: String,
+    save_editing: bool,
     last_frame: Option<(PathBuf, u64)>,
     frame_pending: bool,
     filmstrips: HashMap<PathBuf, Vec<egui::TextureHandle>>,
@@ -72,14 +77,16 @@ impl Editor {
             play_requested: false,
             rendered_playback: false,
             error: String::new(),
-            export_open: false,
+            save_open: false,
+            saving_overlay: false,
+            saving_video: None,
             folder,
             filename: "Edited clip.mp4".into(),
             height: None,
             size_mb: None,
-            jobs: vec![],
+            pending_save: None,
             preview_job: None,
-            project_path: String::new(),
+            save_editing: false,
             last_frame: None,
             frame_pending: false,
             filmstrips: HashMap::new(),
@@ -107,21 +114,7 @@ impl Editor {
                         .as_ref()
                         .is_some_and(|(pending, _)| *pending == id) =>
                 {
-                    let (_, path) = self.strip_pending.take().unwrap();
-                    if let Ok(images) = result {
-                        let textures = images
-                            .into_iter()
-                            .enumerate()
-                            .map(|(i, image)| {
-                                ui.ctx().load_texture(
-                                    format!("timeline-{id}-{i}"),
-                                    image,
-                                    egui::TextureOptions::LINEAR,
-                                )
-                            })
-                            .collect();
-                        self.filmstrips.insert(path, textures);
-                    }
+                    self.receive_filmstrip(ui.ctx(), id, result);
                 }
                 MediaReply::Frame(id, result) if id == self.frame_id => {
                     self.frame_pending = false;
@@ -142,10 +135,6 @@ impl Editor {
         if self.loading
             || self.frame_pending
             || self.strip_pending.is_some()
-            || self
-                .jobs
-                .iter()
-                .any(|(p, _)| p.lock().unwrap().result.is_none())
             || self
                 .preview_job
                 .as_ref()
@@ -208,26 +197,9 @@ impl Editor {
             self.last_frame = None;
         }
     }
-    fn save_project(&mut self) -> bool {
-        if let Some(p) = &self.project {
-            let path = PathBuf::from(&self.project_path);
-            match p.save(&path) {
-                Ok(()) => {
-                    self.saved_project = Some(p.clone());
-                    self.error.clear();
-                    return true;
-                }
-                Err(e) => self.error = e.to_string(),
-            }
-        }
-        false
-    }
 }
 impl Drop for Editor {
     fn drop(&mut self) {
-        for (_, c) in &self.jobs {
-            c.store(true, Ordering::Release);
-        }
         if let Some((_, c)) = &self.preview_job {
             c.store(true, Ordering::Release);
         }
@@ -235,6 +207,10 @@ impl Drop for Editor {
 }
 impl Gavnel {
     pub(super) fn begin_editor(&mut self, paths: Vec<PathBuf>) {
+        if let Some(path) = paths.iter().find(|path| self.saves.status(path).is_some()) {
+            self.saves.show_for(path);
+            return;
+        }
         let return_player = if self.page == Page::Player {
             self.player.as_ref().map(|p| p.path.clone())
         } else {
@@ -245,21 +221,6 @@ impl Gavnel {
         editor.return_player = return_player;
         editor.id = self.started.elapsed().as_nanos() as u64;
         editor.frame_id = editor.id;
-        let projects = Settings::path()
-            .parent()
-            .unwrap_or(std::path::Path::new("."))
-            .join("Projects");
-        if let Err(error) = std::fs::create_dir_all(&projects) {
-            self.message = error.to_string();
-            return;
-        }
-        editor.project_path = projects
-            .join(format!(
-                "Edit-{}.gavnel-project",
-                chrono::Local::now().format("%Y%m%d-%H%M%S-%3f")
-            ))
-            .to_string_lossy()
-            .into_owned();
         if let Err(error) = self.media.open(editor.id, paths) {
             editor.error = error.to_string();
             editor.loading = false;
@@ -274,127 +235,11 @@ impl Gavnel {
         let Some(mut editor) = self.editor.take() else {
             return;
         };
+        editor.saving_overlay = self.saves.modal.is_some();
+        editor.poll_save(&self.media);
         editor.poll(ui, &self.media);
-        editor.poll_playback(
-            &mut self.player,
-            transport::Host {
-                parent: self.parent_window,
-                context: &self.context,
-                visible: &self.visible,
-            },
-        );
-        ui.horizontal(|ui| {
-            if ui
-                .button(tr(if editor.return_player.is_some() {
-                    "‹  Player"
-                } else {
-                    "‹  Library"
-                }))
-                .clicked()
-            {
-                self.page = if editor.return_player.is_some() {
-                    Page::Player
-                } else {
-                    Page::Clips
-                };
-                self.player = None;
-            }
-            ui.label(RichText::new(tr("Editor")).size(24.0).strong());
-            if let Some(segment) = editor
-                .project
-                .as_ref()
-                .and_then(|p| p.segments.get(editor.selected))
-            {
-                let name = segment
-                    .info
-                    .path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy();
-                let name_width = (ui.available_width() - 260.0).clamp(0.0, 320.0);
-                ui.add_sized(
-                    [name_width, 24.0],
-                    egui::Label::new(RichText::new(name.as_ref()).size(12.0).color(MUTED))
-                        .truncate(),
-                )
-                .on_hover_text(name.as_ref());
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if buttons::button(ui, buttons::Icon::Export, "Export").clicked() {
-                    self.player = None;
-                    editor.export_open = true;
-                }
-                if buttons::enabled(
-                    ui,
-                    buttons::Icon::SaveProject,
-                    "Save project",
-                    editor.project.is_some(),
-                )
-                .clicked()
-                {
-                    self.player = None;
-                    match platform::save_project(std::path::Path::new(&editor.project_path)) {
-                        Ok(Some(path)) => {
-                            editor.project_path = path.to_string_lossy().into_owned();
-                            editor.save_project();
-                        }
-                        Ok(None) => {}
-                        Err(e) => editor.error = e.to_string(),
-                    }
-                }
-                if buttons::button(ui, buttons::Icon::OpenProject, "Open project").clicked() {
-                    self.player = None;
-                    match platform::choose_project() {
-                        Ok(Some(path)) => {
-                            let destination = navigation::Destination::Project(path);
-                            if !editor.defer_leave(destination.clone()) {
-                                editor.open_project(destination);
-                            }
-                        }
-                        Ok(None) => {}
-                        Err(e) => editor.error = e.to_string(),
-                    }
-                }
-                if buttons::enabled(ui, buttons::Icon::Redo, "Redo", !editor.redo.is_empty())
-                    .on_hover_text("Ctrl+Shift+Z")
-                    .clicked()
-                {
-                    editor.redo();
-                    self.player = None;
-                }
-                if buttons::enabled(ui, buttons::Icon::Undo, "Undo", !editor.undo.is_empty())
-                    .on_hover_text("Ctrl+Z")
-                    .clicked()
-                {
-                    editor.undo();
-                    self.player = None;
-                }
-            });
-        });
-        if editor.leave.is_none() && !ui.ctx().egui_wants_keyboard_input() {
-            let (undo, redo) = ui.input_mut(|i| {
-                (
-                    i.consume_key(egui::Modifiers::CTRL, egui::Key::Z),
-                    i.consume_key(egui::Modifiers::CTRL | egui::Modifiers::SHIFT, egui::Key::Z),
-                )
-            });
-            if undo {
-                editor.undo();
-            }
-            if redo {
-                editor.redo();
-            }
-        }
-        if editor.loading {
-            ui.spinner();
-            ui.label(tr("Opening clips…"));
-        }
-        editor.update_cursor(&mut self.player);
-        editor.body(ui, &self.media, &mut self.player);
-        if editor.play_requested {
-            editor.play_requested = false;
-            editor.toggle_playback(
-                &self.media,
+        ui.add_enabled_ui(editor.saving_video.is_none(), |ui| {
+            editor.poll_playback(
                 &mut self.player,
                 transport::Host {
                     parent: self.parent_window,
@@ -402,51 +247,61 @@ impl Gavnel {
                     visible: &self.visible,
                 },
             );
-        }
-        if self
-            .player
-            .as_ref()
-            .is_some_and(|p| !p.paused() && !p.ended())
-        {
-            ui.ctx().request_repaint_after(Duration::from_millis(16));
-        }
-        if editor.preview_job.is_some() {
-            ui.ctx().request_repaint_after(Duration::from_millis(50));
-        }
-        if !editor.error.is_empty() {
-            ui.horizontal_wrapped(|ui| {
-                ui.colored_label(DANGER, &editor.error);
-                if ui.small_button(tr("Dismiss")).clicked() {
-                    editor.error.clear();
+            editor.header(ui, self);
+            if editor.leave.is_none() && !editor.save_open && !ui.ctx().egui_wants_keyboard_input()
+            {
+                let (undo, redo) = ui.input_mut(|i| {
+                    (
+                        i.consume_key(egui::Modifiers::CTRL, egui::Key::Z),
+                        i.consume_key(egui::Modifiers::CTRL | egui::Modifiers::SHIFT, egui::Key::Z),
+                    )
+                });
+                if undo {
+                    editor.undo();
                 }
-            });
-        }
-        editor.export_dialog(ui, &self.media);
-        editor.job_status(ui);
+                if redo {
+                    editor.redo();
+                }
+            }
+            if editor.loading {
+                ui.spinner();
+                ui.label(tr("Opening clips…"));
+            }
+            editor.update_cursor(&mut self.player);
+            editor.body(ui, &self.media, &mut self.player);
+            if editor.play_requested {
+                editor.play_requested = false;
+                editor.toggle_playback(
+                    &self.media,
+                    &mut self.player,
+                    transport::Host {
+                        parent: self.parent_window,
+                        context: &self.context,
+                        visible: &self.visible,
+                    },
+                );
+            }
+            if self
+                .player
+                .as_ref()
+                .is_some_and(|p| !p.paused() && !p.ended())
+            {
+                ui.ctx().request_repaint_after(Duration::from_millis(16));
+            }
+            if editor.preview_job.is_some() {
+                ui.ctx().request_repaint_after(Duration::from_millis(50));
+            }
+            if !editor.error.is_empty() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.colored_label(DANGER, &editor.error);
+                    if ui.small_button(tr("Dismiss")).clicked() {
+                        editor.error.clear();
+                    }
+                });
+            }
+            editor.save_video_dialog(ui, &self.media);
+        });
         self.editor = Some(editor);
-    }
-}
-
-impl Gavnel {
-    pub(super) fn open_edit_project(&mut self) {
-        match platform::choose_project() {
-            Ok(Some(path)) => match EditProject::load(&path) {
-                Ok(project) => {
-                    self.player = None;
-                    let mut editor = Editor::new(self.settings.clips_dir.clone());
-                    editor.id = self.started.elapsed().as_nanos() as u64;
-                    editor.frame_id = editor.id;
-                    editor.saved_project = Some(project.clone());
-                    editor.project = Some(project);
-                    editor.loading = false;
-                    editor.project_path = path.to_string_lossy().into_owned();
-                    self.editor = Some(editor);
-                    self.page = Page::Editor;
-                }
-                Err(e) => self.message = e.to_string(),
-            },
-            Ok(None) => {}
-            Err(e) => self.message = e.to_string(),
-        }
+        self.collect_video_save();
     }
 }

@@ -67,6 +67,9 @@ impl Thumbnails {
             requests,
         }
     }
+    pub fn invalidate(&mut self, path: &Path) {
+        self.cache.lock().unwrap().remove(path);
+    }
     pub fn get(&mut self, path: &Path) -> Option<Arc<ColorImage>> {
         if let Some(image) = self.cache.lock().unwrap().get(path) {
             return image.clone();

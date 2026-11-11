@@ -12,6 +12,19 @@ impl Raster {
     pub fn render(&self, crop: (u32, u32, u32, u32), canvas: (u32, u32)) -> Vec<u8> {
         let (left, top, width, height) = crop;
         let (out_w, out_h) = canvas;
+        if canvas == (width, height) {
+            let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+            for y in top..top + height {
+                let start = ((y * self.width + left) * 4) as usize;
+                for pixel in self.rgba[start..start + width as usize * 4]
+                    .as_chunks::<4>()
+                    .0
+                {
+                    pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0], 255]);
+                }
+            }
+            return pixels;
+        }
         let scale = (out_w as f64 / width as f64)
             .min(out_h as f64 / height as f64)
             .min(1.0);
@@ -92,49 +105,58 @@ impl Video {
     }
     pub fn at(&mut self, seconds: f64) -> Result<&Raster> {
         let target = seconds * TICKS - TICKS * 0.5 / self.info.fps;
-        while self
+        if self
             .current
             .as_ref()
             .is_none_or(|(time, _)| (*time as f64) < target)
         {
-            let Some((time, sample)) = self
+            // Seeking can land before the requested timestamp. Let Windows
+            // advance the decoder, but copy pixels only for the frame we keep.
+            let mut latest = None;
+            while let Some((time, sample)) = self
                 .source
                 .read(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)?
-            else {
-                break;
-            };
-            let media = unsafe {
-                self.source
-                    .reader
-                    .GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)?
-            };
-            let size = unsafe { media.GetUINT64(&MF_MT_FRAME_SIZE)? };
-            let subtype = unsafe { media.GetGUID(&MF_MT_SUBTYPE)? };
-            ensure!(
-                (size >> 32) as u32 >= self.info.width
-                    && (size >> 32) as u32 <= self.info.width.div_ceil(16) * 16
-                    && size as u32 >= self.info.height
-                    && size as u32 <= self.info.height.div_ceil(16) * 16
-                    && subtype == MFVideoFormat_RGB32,
-                "Unexpected decoded video layout: {}x{}, {subtype:?}.",
-                size >> 32,
-                size as u32
-            );
-            self.stride = unsafe {
-                media
-                    .GetUINT32(&MF_MT_DEFAULT_STRIDE)
-                    .map(|value| value as i32)
-                    .unwrap_or(self.stride)
-            };
-            self.current = Some((
-                time,
-                decode(&sample, &self.info, (self.stride, size as u32))?,
-            ));
+            {
+                latest = Some((time, sample));
+                if time as f64 >= target {
+                    break;
+                }
+            }
+            if let Some((time, sample)) = latest {
+                self.current = Some((time, self.raster(&sample)?));
+            }
         }
         self.current
             .as_ref()
             .map(|(_, raster)| raster)
             .context("Windows returned no video frames.")
+    }
+
+    fn raster(&mut self, sample: &IMFSample) -> Result<Raster> {
+        let media = unsafe {
+            self.source
+                .reader
+                .GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32)?
+        };
+        let size = unsafe { media.GetUINT64(&MF_MT_FRAME_SIZE)? };
+        let subtype = unsafe { media.GetGUID(&MF_MT_SUBTYPE)? };
+        ensure!(
+            (size >> 32) as u32 >= self.info.width
+                && (size >> 32) as u32 <= self.info.width.div_ceil(16) * 16
+                && size as u32 >= self.info.height
+                && size as u32 <= self.info.height.div_ceil(16) * 16
+                && subtype == MFVideoFormat_RGB32,
+            "Unexpected decoded video layout: {}x{}, {subtype:?}.",
+            size >> 32,
+            size as u32
+        );
+        self.stride = unsafe {
+            media
+                .GetUINT32(&MF_MT_DEFAULT_STRIDE)
+                .map(|value| value as i32)
+                .unwrap_or(self.stride)
+        };
+        decode(sample, &self.info, (self.stride, size as u32))
     }
 }
 
@@ -208,13 +230,21 @@ pub fn frame(path: &Path, seconds: f64) -> Result<ColorImage> {
     Ok(video.at(seconds)?.image(800))
 }
 pub fn filmstrip(path: &Path) -> Result<Vec<ColorImage>> {
+    filmstrip_progressive(path, |_| {})
+}
+
+pub(super) fn filmstrip_progressive(
+    path: &Path,
+    mut ready: impl FnMut(&[ColorImage]),
+) -> Result<Vec<ColorImage>> {
     let info = super::inspect::probe(path)?;
     let mut video = Video::new(&info)?;
-    (0..8)
-        .map(|index| {
-            let time = info.duration * (index as f64 + 0.5) / 8.0;
-            video.seek(time)?;
-            Ok(video.at(time)?.image(144))
-        })
-        .collect()
+    let mut images = Vec::with_capacity(8);
+    for index in 0..8 {
+        let time = info.duration * (index as f64 + 0.5) / 8.0;
+        video.seek(time)?;
+        images.push(video.at(time)?.image(144));
+        ready(&images);
+    }
+    Ok(images)
 }

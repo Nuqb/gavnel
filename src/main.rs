@@ -83,6 +83,10 @@ fn main() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("Gavnel")
+            .with_decorations(false)
+            // Video child windows are replaced during editor seeking. Keep an
+            // opaque host beneath them so transitions cannot expose the desktop.
+            .with_transparent(false)
             .with_inner_size([1280.0, 820.0])
             .with_min_inner_size([1000.0, 650.0])
             .with_visible(!background)

@@ -17,9 +17,6 @@ impl Gavnel {
                 self.settings.library_group_by_game = true;
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui.button(tr("Open project")).clicked() {
-                    self.open_edit_project();
-                }
                 if ui
                     .selectable_label(self.selecting_clips, tr("Select clips"))
                     .clicked()

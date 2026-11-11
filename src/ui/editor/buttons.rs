@@ -10,22 +10,15 @@ pub(super) enum Icon {
     Center,
     Play,
     Pause,
-    OpenProject,
-    SaveProject,
-    Export,
+    SaveVideo,
 }
 impl Icon {
     fn image(self, ui: &egui::Ui) -> egui::Image<'static> {
         let (name, svg): (&'static str, &[u8]) = match self {
-            Self::OpenProject => (
-                "project-open",
-                include_bytes!("../../../assets/icons/project-open.svg"),
-            ),
-            Self::SaveProject => (
+            Self::SaveVideo => (
                 "project-save",
                 include_bytes!("../../../assets/icons/project-save.svg"),
             ),
-            Self::Export => ("export", include_bytes!("../../../assets/icons/export.svg")),
             Self::Trim => (
                 "editor-trim",
                 include_bytes!("../../../assets/icons/editor-trim.svg"),
