@@ -13,6 +13,11 @@ use windows::Win32::{
 };
 
 impl Player {
+    pub(crate) fn image_rect(&self) -> Option<egui::Rect> {
+        let rect = self.window_rect.get();
+        rect.is_positive().then_some(rect)
+    }
+
     pub fn layout(&self, rect: egui::Rect, pixels: f32, visible: bool) -> Result<()> {
         self.layout_cropped(rect, pixels, visible, None)
     }

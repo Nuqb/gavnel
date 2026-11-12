@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.9
+
+- Fix the solid black strip behind playback controls so the timeline and buttons overlay the video.
+- Anchor playback controls to the bottom of the displayed image when the player has letterbox or pillarbox bars.
+- Add a native rendering check for control visibility and transparency over the video surface.
+
 ## 0.3.8
 
 - Keep capture and clip-save errors visible in the main app with copy and dismiss controls, and retain the original capture failure when a clip is requested without active capture.

@@ -458,3 +458,20 @@ fn controls_overlay_the_full_video_instead_of_reserving_a_bar_below_it() {
         assert!(controls.top() > video.center().y);
     }
 }
+
+#[test]
+fn controls_follow_the_image_edges_inside_letterboxed_and_pillarboxed_surfaces() {
+    let surface = egui::Rect::from_min_size(egui::pos2(20.0, 80.0), Vec2::new(1280.0, 960.0));
+    for image in [
+        surface.shrink2(Vec2::new(0.0, 120.0)),
+        surface.shrink2(Vec2::new(370.0, 0.0)),
+    ] {
+        for bookmarks in [&[][..], &[15.0, 30.0][..]] {
+            let (_, controls) = surface_rects(image, bookmarks);
+            assert!(image.contains_rect(controls));
+            assert_eq!(controls.bottom(), image.bottom());
+            assert_eq!(controls.left(), image.left());
+            assert_eq!(controls.right(), image.right());
+        }
+    }
+}

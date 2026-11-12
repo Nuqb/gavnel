@@ -3,7 +3,7 @@ use anyhow::Result;
 use eframe::egui;
 use windows::{
     Win32::{
-        Foundation::{HANDLE, HWND, LPARAM, LRESULT, POINT, WPARAM},
+        Foundation::{COLORREF, HANDLE, HWND, LPARAM, LRESULT, POINT, WPARAM},
         Graphics::{
             Dwm::{
                 DWMNCRP_DISABLED, DWMWA_BORDER_COLOR, DWMWA_NCRENDERING_POLICY,
@@ -108,6 +108,7 @@ pub(crate) fn prepare(parent: HWND, rect: egui::Rect) -> Result<()> {
     unsafe {
         remove_window_frame(window)?;
         attach_child(window, parent)?;
+        enable_transparency(window)?;
         let mut origin = POINT {
             x: rect.left().round() as i32,
             y: rect.top().round() as i32,
@@ -122,6 +123,19 @@ pub(crate) fn prepare(parent: HWND, rect: egui::Rect) -> Result<()> {
             rect.height().round().max(1.0) as i32,
             SWP_NOACTIVATE,
         )?;
+    }
+    Ok(())
+}
+
+unsafe fn enable_transparency(window: HWND) -> Result<()> {
+    unsafe {
+        let style = GetWindowLongPtrW(window, GWL_EXSTYLE) as u32;
+        if style & WS_EX_LAYERED.0 == 0 {
+            // DWM's glass transparency does not composite an OpenGL child over
+            // its video sibling. A layered child preserves the framebuffer alpha.
+            SetWindowLongPtrW(window, GWL_EXSTYLE, (style | WS_EX_LAYERED.0) as isize);
+            SetLayeredWindowAttributes(window, COLORREF(0), 255, LWA_ALPHA)?;
+        }
     }
     Ok(())
 }

@@ -12,8 +12,12 @@ use windows::Win32::{
     },
 };
 
+#[path = "playback_overlay_pixels.rs"]
+mod pixels;
+
 struct Validation {
     parent: HWND,
+    _surface: pixels::Surface,
     frames: usize,
     result: Arc<Mutex<Option<String>>>,
 }
@@ -44,6 +48,13 @@ impl eframe::App for Validation {
                 let action = show(ui.ctx(), self.parent, rect, &mut state, visible);
                 if let Some(error) = action.error {
                     *self.result.lock().unwrap() = Some(error);
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    return;
+                }
+                if self.frames == 6
+                    && let Err(error) = pixels::verify(self.parent)
+                {
+                    *self.result.lock().unwrap() = Some(error.to_string());
                 }
                 if self.frames >= 2 {
                     match native::window(self.parent) {
@@ -139,7 +150,8 @@ pub(crate) fn run() -> Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_title("Gavnel overlay validation")
             .with_inner_size([640.0, 360.0])
-            .with_position([-10000.0, -10000.0])
+            .with_position([100.0, 100.0])
+            .with_window_level(egui::WindowLevel::AlwaysOnTop)
             .with_active(false)
             // Match the opaque main app; only the control viewport is transparent.
             .with_transparent(false),
@@ -170,6 +182,7 @@ pub(crate) fn run() -> Result<()> {
             };
             Ok(Box::new(Validation {
                 parent,
+                _surface: pixels::Surface::new(parent)?,
                 frames: 0,
                 result: shared,
             }))

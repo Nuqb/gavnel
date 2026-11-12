@@ -160,7 +160,7 @@ impl Gavnel {
         let size = Vec2::new(ui.available_width(), ui.available_height().max(160.0));
         let (surface, _) = ui.allocate_exact_size(size, egui::Sense::hover());
         ui.painter().rect_filled(surface, 8.0, Color32::BLACK);
-        let (video, controls) = surface_rects(surface, &player.bookmarks);
+        let video = surface;
         let error = player.error();
         ui.ctx()
             .data_mut(|data| data.insert_temp(egui::Id::unique("video-layout-rect"), video));
@@ -171,6 +171,8 @@ impl Gavnel {
         ) {
             self.message = error.to_string();
         }
+        // Anchor controls to the fitted image, excluding the surrounding letterbox bars.
+        let (_, controls) = surface_rects(player.image_rect().unwrap_or(video), &player.bookmarks);
         let popup = ui
             .ctx()
             .data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("video-popup-rect")));
