@@ -126,9 +126,19 @@ impl Worker {
         }
     }
 
+    /// Finishes the active capture and confirms a long recording's result.
+    fn finish_recording(&mut self) {
+        if let Some((source, outcome)) = finish_recording(&mut self.recording, &self.input.shared) {
+            self.feedback(FeedbackEvent::LongRecording {
+                source,
+                finished: Some(outcome),
+            });
+        }
+    }
+
     fn stop(&mut self) {
         self.flush_highlights(true);
-        finish_recording(&mut self.recording, &self.input.shared);
+        self.finish_recording();
         self.armed = false;
         let mut state = self.input.shared.lock().unwrap();
         state.armed = false;
@@ -258,7 +268,7 @@ impl Worker {
             return;
         }
         self.flush_highlights(true);
-        finish_recording(&mut self.recording, &self.input.shared);
+        self.finish_recording();
         self.settings = settings;
         self.feedback(FeedbackEvent::Configure(
             self.settings.clip_feedback.clone(),
@@ -437,6 +447,12 @@ impl Worker {
         state.capture_error = None;
         state.recording = true;
         state.full_recording = rec.session.is_some();
+        if rec.session.is_some() {
+            self.feedback(FeedbackEvent::LongRecording {
+                source: rec.label.clone(),
+                finished: None,
+            });
+        }
         state.source = rec.target.label();
         state.backend = rec.source.backend().into();
         state.message = if rec.session.is_some() {
@@ -456,7 +472,7 @@ impl Worker {
             .recording
             .as_ref()
             .is_some_and(|rec| rec.session.is_some());
-        finish_recording(&mut self.recording, &self.input.shared);
+        self.finish_recording();
         if full && !self.settings.recording_mode.automatic() {
             self.armed = false;
             self.input.shared.lock().unwrap().armed = false;

@@ -36,25 +36,56 @@ pub fn write_clip(snapshot: &Snapshot, folder: &Path) -> Result<PathBuf> {
     }
     std::fs::rename(&temp_path, &final_path)
         .context("Clip finalization failed; the .partial file was preserved")?;
-    let mut streams = vec![Stream::Desktop, Stream::Microphone];
-    for p in &snapshot.packets {
-        if matches!(p.stream, Stream::Application(_)) && !streams.contains(&p.stream) {
+    write_track_labels(&final_path, &audio_layout(snapshot), &snapshot.audio_names)?;
+    Ok(final_path)
+}
+
+/// Audio streams in file order: the combined mix, then separate tracks.
+fn audio_layout(s: &Snapshot) -> Vec<Stream> {
+    let mut streams: Vec<Stream> = Vec::new();
+    for p in &s.packets {
+        if matches!(
+            p.stream,
+            Stream::Desktop | Stream::Microphone | Stream::Application(_)
+        ) && !streams.contains(&p.stream)
+        {
             streams.push(p.stream);
         }
     }
-    let mut labels = vec!["Combined".to_owned()];
-    for stream in streams {
-        if snapshot.packets.iter().any(|p| p.stream == stream) {
-            labels.push(crate::audio::track_label(stream, &snapshot.audio_names));
-        }
+    streams.sort_by_key(|stream| match stream {
+        Stream::Desktop => 0,
+        Stream::Application(i) => 1 + u32::from(*i),
+        _ => u32::MAX,
+    });
+    if s.has_audio && s.packets.iter().any(|p| p.stream == Stream::Audio) {
+        streams.insert(0, Stream::Audio);
     }
-    if labels.len() > 1 {
+    streams
+}
+
+pub(crate) fn aac_track(stream: Stream) -> TrackConfig {
+    let mut track: TrackConfig = AacConfig {
+        bitrate: crate::audio::track_bitrate(stream),
+        ..Default::default()
+    }
+    .into();
+    track.timescale = 48_000;
+    track
+}
+
+/// Names multi-track audio in file order for the editor.
+pub(crate) fn write_track_labels(video: &Path, layout: &[Stream], names: &[String]) -> Result<()> {
+    if layout.len() > 1 {
+        let labels: Vec<_> = layout
+            .iter()
+            .map(|stream| crate::audio::track_label(*stream, names))
+            .collect();
         std::fs::write(
-            final_path.with_extension("tracks.json"),
+            video.with_extension("tracks.json"),
             serde_json::to_vec(&labels)?,
         )?;
     }
-    Ok(final_path)
+    Ok(())
 }
 
 pub(crate) fn create_destination(source: &str, folder: &Path) -> Result<(File, PathBuf, PathBuf)> {
@@ -176,20 +207,6 @@ fn mux(s: &Snapshot, file: File) -> Result<()> {
     .into();
     track.timescale = 90_000;
     writer.add_track(&track)?;
-    let audio: Vec<_> = s
-        .packets
-        .iter()
-        .filter(|p| p.stream == Stream::Audio)
-        .collect();
-    if s.has_audio && !audio.is_empty() {
-        let mut track: TrackConfig = AacConfig {
-            bitrate: 192_000,
-            ..Default::default()
-        }
-        .into();
-        track.timescale = 48_000;
-        writer.add_track(&track)?;
-    }
     // Sample durations carry timeline gaps: the mp4 crate accumulates durations,
     // rather than using start_time to insert missing video frames.
     for (i, p) in videos.iter().enumerate() {
@@ -206,10 +223,11 @@ fn mux(s: &Snapshot, file: File) -> Result<()> {
             },
         )?;
     }
-    if s.has_audio && !audio.is_empty() {
-        for p in audio {
+    for (stream, id) in audio_layout(s).into_iter().zip(2..) {
+        writer.add_track(&aac_track(stream))?;
+        for p in s.packets.iter().filter(|p| p.stream == stream) {
             writer.write_sample(
-                2,
+                id,
                 &Mp4Sample {
                     start_time: (p.pts - s.start) * 48_000 / TICKS,
                     duration: 1024,
@@ -219,45 +237,6 @@ fn mux(s: &Snapshot, file: File) -> Result<()> {
                 },
             )?;
         }
-    }
-    let mut next_id = if s.has_audio && !s.packets.iter().all(|p| p.stream != Stream::Audio) {
-        3
-    } else {
-        2
-    };
-    let mut extra_streams = vec![Stream::Desktop, Stream::Microphone];
-    for packet in &s.packets {
-        if matches!(packet.stream, Stream::Application(_))
-            && !extra_streams.contains(&packet.stream)
-        {
-            extra_streams.push(packet.stream);
-        }
-    }
-    for stream in extra_streams {
-        let packets: Vec<_> = s.packets.iter().filter(|p| p.stream == stream).collect();
-        if packets.is_empty() {
-            continue;
-        }
-        let mut track: TrackConfig = AacConfig {
-            bitrate: 192_000,
-            ..Default::default()
-        }
-        .into();
-        track.timescale = 48_000;
-        writer.add_track(&track)?;
-        for p in packets {
-            writer.write_sample(
-                next_id,
-                &Mp4Sample {
-                    start_time: (p.pts - s.start) * 48_000 / TICKS,
-                    duration: 1024,
-                    rendering_offset: 0,
-                    is_sync: true,
-                    bytes: Bytes::copy_from_slice(&p.data.bytes),
-                },
-            )?;
-        }
-        next_id += 1;
     }
     writer.write_end()?;
     let mut buffer = writer.into_writer();
@@ -399,5 +378,9 @@ mod tests {
         for id in 1..=4 {
             assert_eq!(reader.sample_count(id).unwrap(), 1);
         }
+        let labels: Vec<String> =
+            serde_json::from_slice(&std::fs::read(path.with_extension("tracks.json")).unwrap())
+                .unwrap();
+        assert_eq!(labels, ["Combined", "PC Audio", "Microphone"]);
     }
 }

@@ -14,7 +14,7 @@ mod trim;
 mod worker;
 use anyhow::{Context, Result, ensure};
 pub use frames::{filmstrip, frame};
-pub use inspect::probe;
+pub use inspect::{audio_in_file_order, combined_audio_position, probe};
 pub use model::*;
 pub use render::estimated_size_mb;
 pub use self_test::run as self_test;

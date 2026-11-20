@@ -30,6 +30,9 @@ pub(super) struct AacEncoder {
 }
 impl AacEncoder {
     pub(super) fn new() -> Result<Self> {
+        Self::for_stream(Stream::Audio)
+    }
+    pub(super) fn for_stream(stream: Stream) -> Result<Self> {
         let runtime = MediaFoundation::new()?;
         unsafe {
             let transform: IMFTransform =
@@ -41,7 +44,7 @@ impl AacEncoder {
                 (MF_MT_AUDIO_NUM_CHANNELS, 2),
                 (MF_MT_AUDIO_SAMPLES_PER_SECOND, 48_000),
                 (MF_MT_AUDIO_BITS_PER_SAMPLE, 16),
-                (MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 24_000),
+                (MF_MT_AUDIO_AVG_BYTES_PER_SECOND, track_bitrate(stream) / 8),
                 (MF_MT_AAC_PAYLOAD_TYPE, 0),
             ] {
                 output.SetUINT32(&key, value)?;
@@ -67,7 +70,7 @@ impl AacEncoder {
                 transform,
                 output_size,
                 output_index: 0,
-                stream: Stream::Audio,
+                stream,
                 _runtime: runtime,
             })
         }

@@ -57,7 +57,7 @@ impl Recording {
         let audio_names = audio_settings.application_names();
         let audio = if has_audio {
             Some(AudioWorker::start(
-                audio_settings,
+                audio_settings.clone(),
                 clock.clone(),
                 crate::replay::EncoderOutput {
                     budget,
@@ -70,15 +70,14 @@ impl Recording {
         };
         let mut buffer = ReplayBuffer::new(settings.replay_buffer_seconds(), has_audio);
         buffer.video = Some(video.config.clone());
-        buffer.audio_names = audio_names.clone();
+        buffer.audio_names = audio_names;
         let fullscreen = target.fullscreen();
         let label = target.recording_label(settings);
         let session = if settings.recording_mode.full() {
             Some(crate::recording::SessionWriter::start_configured(
                 &label,
                 &video.config,
-                settings,
-                audio_names,
+                &audio_settings,
             )?)
         } else {
             None
@@ -264,7 +263,12 @@ impl Recording {
     }
 }
 
-pub(super) fn finish_recording(recording: &mut Option<Recording>, shared: &Mutex<Status>) {
+/// Ends the active capture. For a long recording, returns its source and the
+/// saved file name or the error, so the caller can confirm the result.
+pub(super) fn finish_recording(
+    recording: &mut Option<Recording>,
+    shared: &Mutex<Status>,
+) -> Option<(String, std::result::Result<String, String>)> {
     let rec = recording.take();
     {
         let mut state = shared.lock().unwrap();
@@ -279,23 +283,28 @@ pub(super) fn finish_recording(recording: &mut Option<Recording>, shared: &Mutex
         state.preview = None;
         state.backend.clear();
     }
-    let Some(rec) = rec else {
-        return;
-    };
-    match rec.finish() {
+    let rec = rec?;
+    let source = rec.label.clone();
+    let long = rec.session.is_some();
+    let outcome = match rec.finish() {
         Ok(Some(path)) => {
+            let file = path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
             let mut state = shared.lock().unwrap();
-            state.message = format!(
-                "Saved recording: {}",
-                path.file_name().unwrap_or_default().to_string_lossy()
-            );
+            state.message = format!("Saved recording: {file}");
             state.last_clip = Some(path);
             state.saved_count += 1;
+            Ok(file)
         }
-        Ok(None) => {}
-        Err(error) => shared
-            .lock()
-            .unwrap()
-            .fail(format!("Recording stopped: {error:#}")),
-    }
+        Ok(None) => return None,
+        Err(error) => {
+            let message = format!("Recording stopped: {error:#}");
+            shared.lock().unwrap().fail(message.clone());
+            Err(message)
+        }
+    };
+    long.then_some((source, outcome))
 }

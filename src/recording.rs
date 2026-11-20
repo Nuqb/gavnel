@@ -6,7 +6,7 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use bytes::Bytes;
 use crossbeam_channel::{Sender, bounded};
-use mp4::{AacConfig, AvcConfig, Mp4Config, Mp4Sample, Mp4Writer, TrackConfig};
+use mp4::{AvcConfig, Mp4Config, Mp4Sample, Mp4Writer, TrackConfig};
 use std::{
     fs::File,
     io::{BufWriter, Write},
@@ -33,23 +33,25 @@ impl SessionWriter {
                 microphone: false,
                 ..Default::default()
             },
-            Vec::new(),
         )
     }
     pub fn start_configured(
         source: &str,
         video: &VideoConfig,
         settings: &crate::config::Settings,
-        names: Vec<String>,
     ) -> Result<Self> {
         let folder = &settings.clips_dir;
-        let audio = settings.desktop_audio || settings.microphone;
+        let mut layout = Vec::new();
+        if settings.desktop_audio || settings.microphone {
+            layout.push(Stream::Audio);
+            layout.extend(crate::audio::separate_streams(settings));
+        }
         let limit = settings.storage_limit_gb;
         crate::storage::check_limit(folder, limit, 0)?;
         let folder = folder.to_owned();
         // Open before starting capture so permission/storage failures are immediate.
-        let mut mux = ContinuousMp4::new(source, &folder, video, audio)?;
-        mux.audio_names = names;
+        let mut mux = ContinuousMp4::new(source, &folder, video, layout)?;
+        mux.audio_names = settings.application_names();
         let path = mux.final_path.clone();
         let (tx, rx) = bounded::<Packet>(512);
         let worker = std::thread::Builder::new()
@@ -135,14 +137,14 @@ struct ContinuousMp4 {
     final_path: PathBuf,
     start: Option<u64>,
     pending_video: Option<Packet>,
-    audio: bool,
-    last_audio: Option<u64>,
-    extra_audio: Vec<(Stream, u32, Option<u64>)>,
+    /// Audio stream, MP4 track id, and last written timestamp, in file order.
+    audio_tracks: Vec<(Stream, u32, Option<u64>)>,
     audio_names: Vec<String>,
 }
 
 impl ContinuousMp4 {
-    fn new(source: &str, folder: &Path, video: &VideoConfig, audio: bool) -> Result<Self> {
+    /// `layout` lists audio streams in file order, starting with the combined mix.
+    fn new(source: &str, folder: &Path, video: &VideoConfig, layout: Vec<Stream>) -> Result<Self> {
         let (file, temp_path, final_path) = create_destination(source, folder)?;
         let result = (|| -> Result<_> {
             let mut writer = Mp4Writer::write_start(
@@ -169,14 +171,8 @@ impl ContinuousMp4 {
             .into();
             track.timescale = 90_000;
             writer.add_track(&track)?;
-            if audio {
-                let mut track: TrackConfig = AacConfig {
-                    bitrate: 192_000,
-                    ..Default::default()
-                }
-                .into();
-                track.timescale = 48_000;
-                writer.add_track(&track)?;
+            for stream in &layout {
+                writer.add_track(&crate::export::aac_track(*stream))?;
             }
             Ok(writer)
         })();
@@ -193,9 +189,11 @@ impl ContinuousMp4 {
             final_path,
             start: None,
             pending_video: None,
-            audio,
-            last_audio: None,
-            extra_audio: Vec::new(),
+            audio_tracks: layout
+                .into_iter()
+                .zip(2..)
+                .map(|(stream, id)| (stream, id, None))
+                .collect(),
             audio_names: Vec::new(),
         })
     }
@@ -225,43 +223,14 @@ impl ContinuousMp4 {
                 }
                 self.pending_video = Some(packet);
             }
-            Stream::Audio if self.audio => {
-                if self.last_audio.is_some_and(|last| packet.pts <= last) {
+            stream => {
+                let Some((_, id, last)) = self
+                    .audio_tracks
+                    .iter_mut()
+                    .find(|(audio, _, _)| *audio == stream)
+                else {
                     return Ok(());
-                }
-                self.writer.write_sample(
-                    2,
-                    &Mp4Sample {
-                        start_time: (packet.pts - start) * 48_000 / TICKS,
-                        duration: 1024,
-                        rendering_offset: 0,
-                        is_sync: true,
-                        bytes: Bytes::copy_from_slice(&packet.data.bytes),
-                    },
-                )?;
-                self.last_audio = Some(packet.pts);
-            }
-            Stream::Desktop | Stream::Microphone | Stream::Application(_) if self.audio => {
-                let index = if let Some(index) = self
-                    .extra_audio
-                    .iter()
-                    .position(|(stream, _, _)| *stream == packet.stream)
-                {
-                    index
-                } else {
-                    let mut track: TrackConfig = AacConfig {
-                        bitrate: 192_000,
-                        ..Default::default()
-                    }
-                    .into();
-                    track.timescale = 48_000;
-                    self.writer.add_track(&track)?;
-                    let index = self.extra_audio.len();
-                    self.extra_audio
-                        .push((packet.stream, 3 + index as u32, None));
-                    index
                 };
-                let (_, id, last) = &mut self.extra_audio[index];
                 if last.is_some_and(|pts| packet.pts <= pts) {
                     return Ok(());
                 }
@@ -277,7 +246,6 @@ impl ContinuousMp4 {
                 )?;
                 *last = Some(packet.pts);
             }
-            _ => {}
         }
         Ok(())
     }
@@ -325,18 +293,12 @@ impl ContinuousMp4 {
                 self.temp_path.display()
             )
         })?;
-        if !self.extra_audio.is_empty() {
-            let mut labels = vec!["Combined".to_owned()];
-            labels.extend(
-                self.extra_audio
-                    .iter()
-                    .map(|(stream, _, _)| crate::audio::track_label(*stream, &self.audio_names)),
-            );
-            std::fs::write(
-                self.final_path.with_extension("tracks.json"),
-                serde_json::to_vec(&labels)?,
-            )?;
-        }
+        let layout: Vec<_> = self
+            .audio_tracks
+            .iter()
+            .map(|(stream, _, _)| *stream)
+            .collect();
+        crate::export::write_track_labels(&self.final_path, &layout, &self.audio_names)?;
         Ok(self.final_path)
     }
 }
@@ -368,7 +330,7 @@ mod tests {
     fn streams_beyond_replay_length_without_retaining_payloads_or_timing_drift() {
         let dir = tempfile::tempdir().unwrap();
         let budget = Budget::new(1024);
-        let mut mux = ContinuousMp4::new("Session", dir.path(), &config(), false).unwrap();
+        let mut mux = ContinuousMp4::new("Session", dir.path(), &config(), Vec::new()).unwrap();
         for frame in 0..(60 * 180) {
             mux.push(packet(&budget, frame * TICKS / 60, frame % 120 == 0))
                 .unwrap();
@@ -393,14 +355,14 @@ mod tests {
     fn waits_for_keyframe_preserves_gaps_and_cleans_empty_recording() {
         let dir = tempfile::tempdir().unwrap();
         let budget = Budget::new(1024);
-        let mut mux = ContinuousMp4::new("Empty", dir.path(), &config(), false).unwrap();
+        let mut mux = ContinuousMp4::new("Empty", dir.path(), &config(), Vec::new()).unwrap();
         mux.push(packet(&budget, 0, false)).unwrap();
         assert!(mux.finish().is_err());
         assert_eq!(
             std::fs::read_dir(dir.path().join("Empty")).unwrap().count(),
             0
         );
-        let mut mux = ContinuousMp4::new("Gap", dir.path(), &config(), false).unwrap();
+        let mut mux = ContinuousMp4::new("Gap", dir.path(), &config(), Vec::new()).unwrap();
         mux.push(packet(&budget, 5 * TICKS, true)).unwrap();
         mux.push(packet(&budget, 7 * TICKS, false)).unwrap();
         let path = mux.finish().unwrap();
@@ -431,7 +393,14 @@ mod tests {
     fn worker_drains_queued_audio_and_video_before_publishing() {
         let dir = tempfile::tempdir().unwrap();
         let budget = Budget::new(16384);
-        let writer = SessionWriter::start("Session", dir.path(), &config(), true).unwrap();
+        let settings = crate::config::Settings {
+            clips_dir: dir.path().into(),
+            desktop_audio: true,
+            microphone: true,
+            separate_audio_tracks: true,
+            ..Default::default()
+        };
+        let writer = SessionWriter::start_configured("Session", &config(), &settings).unwrap();
         assert!(
             std::fs::read_dir(dir.path().join("Session"))
                 .unwrap()
@@ -460,6 +429,10 @@ mod tests {
         assert_eq!(reader.sample_count(2).unwrap(), 46);
         assert_eq!(reader.sample_count(3).unwrap(), 46);
         assert_eq!(reader.sample_count(4).unwrap(), 46);
+        let labels: Vec<String> =
+            serde_json::from_slice(&std::fs::read(path.with_extension("tracks.json")).unwrap())
+                .unwrap();
+        assert_eq!(labels, ["Combined", "PC Audio", "Microphone"]);
         assert_eq!(
             std::fs::read_dir(dir.path().join("Session"))
                 .unwrap()

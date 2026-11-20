@@ -4,6 +4,27 @@ use std::path::Path;
 use windows::{Win32::Media::MediaFoundation::*, core::PCWSTR};
 
 pub fn decoded_frames(path: &Path, seconds: u64) -> Result<Vec<[f32; 2]>> {
+    decode(path, seconds, false)
+}
+
+/// Decodes the audio track Windows players select by default.
+#[cfg(test)]
+pub fn default_audio_frames(path: &Path, seconds: u64) -> Result<Vec<[f32; 2]>> {
+    decode(path, seconds, true)
+}
+
+unsafe fn default_audio_stream(reader: &IMFSourceReader) -> Result<u32> {
+    for index in 0.. {
+        let selected = unsafe { reader.GetStreamSelection(index)? }.as_bool();
+        let media = unsafe { reader.GetNativeMediaType(index, 0)? };
+        if selected && unsafe { media.GetGUID(&MF_MT_MAJOR_TYPE)? } == MFMediaType_Audio {
+            return Ok(index);
+        }
+    }
+    unreachable!()
+}
+
+fn decode(path: &Path, seconds: u64, windows_default: bool) -> Result<Vec<[f32; 2]>> {
     unsafe {
         MFStartup(MF_VERSION, MFSTARTUP_FULL)?;
         let result = (|| -> Result<Vec<[f32; 2]>> {
@@ -12,7 +33,11 @@ pub fn decoded_frames(path: &Path, seconds: u64) -> Result<Vec<[f32; 2]>> {
             let path = path.strip_prefix("\\\\?\\").unwrap_or(&path);
             let wide: Vec<u16> = path.encode_utf16().chain(Some(0)).collect();
             let reader = MFCreateSourceReaderFromURL(PCWSTR(wide.as_ptr()), None)?;
-            let index = MF_SOURCE_READER_FIRST_AUDIO_STREAM.0 as u32;
+            let index = if windows_default {
+                default_audio_stream(&reader)?
+            } else {
+                MF_SOURCE_READER_FIRST_AUDIO_STREAM.0 as u32
+            };
             reader.SetStreamSelection(MF_SOURCE_READER_ALL_STREAMS.0 as u32, false)?;
             reader.SetStreamSelection(index, true)?;
             let media = MFCreateMediaType()?;

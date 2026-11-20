@@ -14,7 +14,10 @@ use windows::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
         Graphics::Gdi::{BLACK_BRUSH, GetStockObject, HBRUSH},
         Media::MediaFoundation::*,
-        System::Com::*,
+        System::Com::{
+            StructuredStorage::{PropVariantClear, PropVariantToGUID},
+            *,
+        },
         UI::WindowsAndMessaging::*,
     },
     core::{BSTR, Interface, implement, w},
@@ -73,6 +76,10 @@ pub struct Player {
     pub seek_preview: Option<f64>,
     error: Arc<AtomicU32>,
     pending_seek: std::cell::Cell<Option<f64>>,
+    /// File-order position of the combined mix to select once loaded; playback
+    /// starts after the selection.
+    pending_audio: std::cell::Cell<Option<usize>>,
+    autoplay: std::cell::Cell<bool>,
     first_frame: Arc<AtomicBool>,
 }
 impl Player {
@@ -132,7 +139,10 @@ impl Player {
             attrs.SetUINT64(&MF_MEDIA_ENGINE_PLAYBACK_HWND, window.0.0 as u64)?;
             let engine = factory.CreateInstance(0, &attrs)?;
             let engine: IMFMediaEngineEx = engine.cast()?;
-            engine.SetAutoPlay(true)?;
+            // Windows defaults to the last audio track; clips with separate
+            // tracks select the combined mix before playback starts.
+            let pending_audio = crate::media::combined_audio_position(&path).ok().flatten();
+            engine.SetAutoPlay(pending_audio.is_none())?;
             let absolute =
                 std::fs::canonicalize(&path).context("This clip is no longer available")?;
             let absolute = absolute.to_string_lossy();
@@ -151,6 +161,8 @@ impl Player {
                 seek_preview: None,
                 error,
                 pending_seek: std::cell::Cell::new(None),
+                pending_audio: std::cell::Cell::new(pending_audio),
+                autoplay: std::cell::Cell::new(true),
                 first_frame,
             })
         }
@@ -181,6 +193,7 @@ impl Player {
         Ok(())
     }
     pub fn pause(&self) -> Result<()> {
+        self.autoplay.set(false);
         unsafe {
             self.engine.Pause()?;
         }
@@ -207,6 +220,41 @@ impl Player {
         unsafe {
             self.engine
                 .SetCurrentTime(seconds.clamp(0.0, self.duration()))?;
+        }
+        Ok(())
+    }
+    /// Selects the loaded clip's combined mix, then starts playback. A failed
+    /// selection keeps Windows' default track rather than blocking playback.
+    fn start_selected_audio(&self) -> Result<()> {
+        let Some(position) = self.pending_audio.take() else {
+            return Ok(());
+        };
+        let _ = self.select_audio(position);
+        if self.autoplay.get() {
+            unsafe {
+                self.engine.Play()?;
+            }
+        }
+        Ok(())
+    }
+    fn select_audio(&self, position: usize) -> Result<()> {
+        unsafe {
+            let majors = (0..self.engine.GetNumberOfStreams()?)
+                .map(|index| {
+                    let mut value = self.engine.GetStreamAttribute(index, &MF_MT_MAJOR_TYPE)?;
+                    let major = PropVariantToGUID(&value);
+                    let _ = PropVariantClear(&mut value);
+                    Ok(major?)
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let audio = crate::media::audio_in_file_order(&majors);
+            let target = *audio
+                .get(position)
+                .context("Combined audio track not found")?;
+            for index in audio {
+                self.engine.SetStreamSelection(index, index == target)?;
+            }
+            self.engine.ApplyStreamSelections()?;
         }
         Ok(())
     }

@@ -175,6 +175,36 @@ impl Drop for AudioWorker {
     }
 }
 
+/// Windows players default to the audio track with the highest bitrate, so
+/// separate tracks are encoded below the combined mix.
+pub fn track_bitrate(stream: Stream) -> u32 {
+    if stream == Stream::Audio {
+        192_000
+    } else {
+        160_000
+    }
+}
+
+/// Separate tracks encoded for these settings, in file order after the mix.
+pub fn separate_streams(settings: &Settings) -> Vec<Stream> {
+    if !settings.separate_audio_tracks {
+        return Vec::new();
+    }
+    let mut streams = Vec::new();
+    if settings.desktop_audio {
+        if settings.application_audio() {
+            let count = settings.application_names().len() as u16;
+            streams.extend((0..count).map(Stream::Application));
+        } else {
+            streams.push(Stream::Desktop);
+        }
+    }
+    if settings.microphone {
+        streams.push(Stream::Microphone);
+    }
+    streams
+}
+
 pub fn track_label(stream: Stream, names: &[String]) -> String {
     match stream {
         Stream::Desktop => "PC Audio".into(),
@@ -442,6 +472,82 @@ mod tests {
                 );
             }
         }
+    }
+    /// Windows players pick the highest-bitrate audio track. A noisy mic
+    /// track must still lose to the combined mix.
+    #[test]
+    fn windows_playback_defaults_to_combined_mix_over_separate_tracks() {
+        unsafe {
+            CoInitializeEx(None, COINIT_MULTITHREADED).ok().unwrap();
+        }
+        let result = (|| -> Result<()> {
+            let dir = tempfile::tempdir()?;
+            let path = dir.path().join("tracks.mp4");
+            let (tx, rx) = crossbeam_channel::bounded(1024);
+            let budget = Budget::new(4 * 1024 * 1024);
+            let mut mix = AacEncoder::new()?;
+            let mut mic = AacEncoder::for_stream(Stream::Microphone)?;
+            let mut seed = 1u32;
+            for block in 0..141u64 {
+                let (mut tone, mut noise) = ([[0.0; 2]; 1024], [[0.0; 2]; 1024]);
+                for i in 0..1024 {
+                    let t = (block * 1024 + i as u64) as f64 / 48_000.0;
+                    let value = (std::f64::consts::TAU * 440.0 * t).sin() as f32 * 0.05;
+                    tone[i] = [value; 2];
+                    seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                    let random = (seed >> 8) as f32 / (1u32 << 24) as f32 - 0.5;
+                    noise[i] = [random * 1.6, -random * 1.6];
+                }
+                let pts = block * 1024 * TICKS / 48_000;
+                mix.encode(&tone, pts, &budget, &tx)?;
+                mic.encode(&noise, pts, &budget, &tx)?;
+            }
+            drop((mix, mic));
+            let mut writer = mp4::Mp4Writer::write_start(
+                std::io::BufWriter::new(std::fs::File::create(&path)?),
+                &mp4::Mp4Config {
+                    major_brand: "isom".parse()?,
+                    minor_version: 0,
+                    compatible_brands: vec!["isom".parse()?],
+                    timescale: 720_000,
+                },
+            )?;
+            let layout = [Stream::Audio, Stream::Microphone];
+            for stream in layout {
+                writer.add_track(&crate::export::aac_track(stream))?;
+            }
+            for packet in rx.try_iter() {
+                let id = layout.iter().position(|s| *s == packet.stream).unwrap() as u32 + 1;
+                writer.write_sample(
+                    id,
+                    &mp4::Mp4Sample {
+                        start_time: packet.pts * 48_000 / TICKS,
+                        duration: 1024,
+                        rendering_offset: 0,
+                        is_sync: true,
+                        bytes: bytes::Bytes::copy_from_slice(&packet.data.bytes),
+                    },
+                )?;
+            }
+            writer.write_end()?;
+            drop(writer);
+            let decoded = crate::audio_check::default_audio_frames(&path, 2)?;
+            let rms = (decoded[24_000..]
+                .iter()
+                .map(|f| (f[0] as f64).powi(2))
+                .sum::<f64>()
+                / (decoded.len() - 24_000) as f64)
+                .sqrt();
+            assert!(
+                (rms - 0.05 / 2.0f64.sqrt()).abs() < 0.01,
+                "Windows chose a separate track instead of the mix (RMS {rms})"
+            );
+            Ok(())
+        })();
+        unsafe {
+            CoUninitialize();
+        }
+        result.unwrap();
     }
     #[test]
     fn aac_round_trip_preserves_silence_and_stereo_tones_without_capture_or_playback() {

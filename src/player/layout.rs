@@ -29,10 +29,11 @@ impl Player {
         visible: bool,
         crop: Option<[f64; 4]>,
     ) -> Result<()> {
-        if self.duration() > 0.0
-            && let Some(time) = self.pending_seek.take()
-        {
-            self.seek(time)?;
+        if self.duration() > 0.0 {
+            self.start_selected_audio()?;
+            if let Some(time) = self.pending_seek.take() {
+                self.seek(time)?;
+            }
         }
         if !visible {
             unsafe {

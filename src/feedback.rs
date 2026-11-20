@@ -54,6 +54,11 @@ pub enum Event {
         source: String,
         error: Option<String>,
     },
+    /// A long recording began (`None`) or ended with its saved file or error.
+    LongRecording {
+        source: String,
+        finished: Option<std::result::Result<String, String>>,
+    },
     Preview(ClipFeedback, crate::i18n::Language),
 }
 
@@ -149,6 +154,24 @@ impl Presentation {
             }
             .into(),
             body: error.unwrap_or(source),
+            born: now,
+        });
+    }
+    fn long_recording(
+        &mut self,
+        source: String,
+        finished: Option<std::result::Result<String, String>>,
+        now: Instant,
+    ) {
+        let (title, body) = match finished {
+            None => ("Long recording started", source),
+            Some(Ok(file)) => ("Long recording saved", file),
+            Some(Err(error)) => ("Couldn't save recording", error),
+        };
+        self.current = Some(Toast {
+            id: 0,
+            title: title.into(),
+            body,
             born: now,
         });
     }
@@ -302,6 +325,15 @@ impl State {
                     preferences.sound &= error.is_none();
                     self.presentation
                         .screenshot_finished(source, error, Instant::now());
+                    unsafe {
+                        self.present(hwnd, &preferences);
+                    }
+                }
+                Event::LongRecording { source, finished } => {
+                    let mut preferences = self.preferences.clone();
+                    preferences.sound &= !matches!(finished, Some(Err(_)));
+                    self.presentation
+                        .long_recording(source, finished, Instant::now());
                     unsafe {
                         self.present(hwnd, &preferences);
                     }
@@ -508,6 +540,26 @@ mod tests {
         assert_eq!(toast.title, "Screenshot failed");
         assert_eq!(toast.body, "Disk is full");
         assert!(!presentation.expired(later));
+    }
+
+    #[test]
+    fn long_recording_start_and_save_replace_previous_feedback() {
+        let mut presentation = Presentation::default();
+        let now = Instant::now();
+        presentation.captured(7, "Game".into(), 30.0, now);
+        presentation.long_recording("Display 1".into(), None, now);
+        let toast = presentation.current.as_ref().unwrap();
+        assert_eq!(toast.title, "Long recording started");
+        assert_eq!(toast.body, "Display 1");
+        presentation.long_recording("Display 1".into(), Some(Ok("a.mp4".into())), now);
+        assert_eq!(
+            presentation.current.as_ref().unwrap().title,
+            "Long recording saved"
+        );
+        presentation.long_recording("Display 1".into(), Some(Err("Disk full".into())), now);
+        let toast = presentation.current.as_ref().unwrap();
+        assert_eq!(toast.title, "Couldn't save recording");
+        assert_eq!(toast.body, "Disk full");
     }
 
     #[test]

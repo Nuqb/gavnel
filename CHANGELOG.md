@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.10
+
+- Fix separate-audio-track clips playing only the microphone in Gavnel and Windows players. Separate tracks are encoded at 160 kbps so players default to the 192 kbps combined mix, and Gavnel's player selects the combined mix in existing clips.
+- Fix the editor mislabeling separate audio tracks, which hid the microphone track and showed the combined mix as "Microphone".
+- Show notifications when a long recording starts, is saved, or fails to save.
+
 ## 0.3.9
 
 - Fix the solid black strip behind playback controls so the timeline and buttons overlay the video.

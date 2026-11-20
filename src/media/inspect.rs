@@ -1,26 +1,12 @@
 use super::{native::*, *};
-use windows::Win32::{Media::MediaFoundation::*, System::Com::StructuredStorage::*};
+use windows::{
+    Win32::{Media::MediaFoundation::*, System::Com::StructuredStorage::*},
+    core::GUID,
+};
 
 pub fn probe(path: &Path) -> Result<MediaInfo> {
     let source = Source::open(path)?;
-    let (mut video, mut audio) = (None, Vec::new());
-    for index in 0..1024 {
-        let media = match unsafe { source.reader.GetNativeMediaType(index, 0) } {
-            Ok(media) => media,
-            Err(error) if error.code() == MF_E_INVALIDSTREAMNUMBER => break,
-            Err(error) => return Err(error.into()),
-        };
-        let major = unsafe { media.GetGUID(&MF_MT_MAJOR_TYPE)? };
-        if major == MFMediaType_Video && video.is_none() {
-            video = Some(media);
-        }
-        if major == MFMediaType_Audio {
-            audio.push(AudioTrack {
-                index,
-                label: format!("Audio {}", audio.len() + 1),
-            });
-        }
-    }
+    let (video, mut audio) = streams(&source)?;
     let video = video.context("Choose a video file.")?;
     let (size, rate, duration) = unsafe {
         let mut value = source
@@ -58,6 +44,48 @@ pub fn probe(path: &Path) -> Result<MediaInfo> {
     })
 }
 
+/// Audio stream indices in file order, given each stream's major type as a
+/// Windows component lists them. The MP4 source reader lists tracks in reverse
+/// file order while the media engine keeps file order; recordings store video
+/// first, so finding video last identifies a reversed listing.
+pub fn audio_in_file_order(majors: &[GUID]) -> Vec<u32> {
+    let mut audio: Vec<u32> = (0..majors.len() as u32)
+        .filter(|&index| majors[index as usize] == MFMediaType_Audio)
+        .collect();
+    let video = majors.iter().position(|major| *major == MFMediaType_Video);
+    if majors.len() > 1 && video == Some(majors.len() - 1) {
+        audio.reverse();
+    }
+    audio
+}
+
+/// The first video stream's native type and every audio stream, with audio in
+/// file order (the order separate-track labels are stored in).
+fn streams(source: &Source) -> Result<(Option<IMFMediaType>, Vec<AudioTrack>)> {
+    let (mut video, mut majors) = (None, Vec::new());
+    for index in 0..1024 {
+        let media = match unsafe { source.reader.GetNativeMediaType(index, 0) } {
+            Ok(media) => media,
+            Err(error) if error.code() == MF_E_INVALIDSTREAMNUMBER => break,
+            Err(error) => return Err(error.into()),
+        };
+        let major = unsafe { media.GetGUID(&MF_MT_MAJOR_TYPE)? };
+        if major == MFMediaType_Video && video.is_none() {
+            video = Some(media);
+        }
+        majors.push(major);
+    }
+    let audio = audio_in_file_order(&majors)
+        .into_iter()
+        .enumerate()
+        .map(|(number, index)| AudioTrack {
+            index,
+            label: format!("Audio {}", number + 1),
+        })
+        .collect();
+    Ok((video, audio))
+}
+
 fn label_tracks(path: &Path, audio: &mut Vec<AudioTrack>) {
     let stem = path.file_stem().unwrap_or_default().to_string_lossy();
     let legacy = audio.len() == 3
@@ -78,9 +106,26 @@ fn label_tracks(path: &Path, audio: &mut Vec<AudioTrack>) {
             track.label = label;
         }
     }
-    if audio.len() > 1 && audio[0].label == "Combined" {
-        audio.remove(0);
+    // The editor mixes the separate tracks itself, so it hides the stored mix.
+    if audio.len() > 1
+        && let Some(combined) = audio.iter().position(|track| track.label == "Combined")
+    {
+        audio.remove(combined);
     }
+}
+
+/// File-order position of the combined mix among the audio tracks, when the
+/// clip also has separate tracks.
+pub fn combined_audio_position(path: &Path) -> Result<Option<usize>> {
+    let (_, audio) = streams(&Source::open(path)?)?;
+    let mut separate = audio.clone();
+    label_tracks(path, &mut separate);
+    if separate.len() == audio.len() {
+        return Ok(None);
+    }
+    Ok(audio
+        .iter()
+        .position(|track| !separate.iter().any(|kept| kept.index == track.index)))
 }
 
 fn markers(path: &Path) -> Result<Vec<(f64, String)>> {
@@ -107,4 +152,42 @@ fn markers(path: &Path) -> Result<Vec<(f64, String)>> {
     }
     markers.sort_by(|a, b| a.0.total_cmp(&b.0));
     Ok(markers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn tracks(count: u32) -> Vec<AudioTrack> {
+        (0..count)
+            .map(|i| AudioTrack {
+                index: i + 1,
+                label: format!("Audio {}", i + 1),
+            })
+            .collect()
+    }
+    #[test]
+    fn audio_order_follows_file_order_in_both_windows_listings() {
+        let (v, a) = (MFMediaType_Video, MFMediaType_Audio);
+        // Media engine: file order, video first.
+        assert_eq!(audio_in_file_order(&[v, a, a, a]), [1, 2, 3]);
+        // Source reader: reverse file order, video last.
+        assert_eq!(audio_in_file_order(&[a, a, a, v]), [2, 1, 0]);
+        assert_eq!(audio_in_file_order(&[a]), [0]);
+    }
+    #[test]
+    fn editor_hides_combined_mix_whether_stored_first_or_last() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("clip.mp4");
+        for (labels, kept) in [
+            (r#"["Combined","PC Audio","Microphone"]"#, [2, 3]),
+            (r#"["PC Audio","Microphone","Combined"]"#, [1, 2]),
+        ] {
+            std::fs::write(path.with_extension("tracks.json"), labels).unwrap();
+            let mut audio = tracks(3);
+            label_tracks(&path, &mut audio);
+            let indices: Vec<_> = audio.iter().map(|track| track.index).collect();
+            assert_eq!(indices, kept);
+            assert!(audio.iter().all(|track| track.label != "Combined"));
+        }
+    }
 }

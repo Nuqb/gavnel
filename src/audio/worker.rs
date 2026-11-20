@@ -29,34 +29,22 @@ pub(super) fn run(
     } = output;
     let _apartment = ComApartment::new()?;
     let mut encoder = AacEncoder::new().context("Windows AAC audio encoding could not start")?;
-    let mut pc_encoder = if settings.desktop_audio
-        && settings.separate_audio_tracks
-        && !settings.application_audio()
-    {
-        Some(AacEncoder::new()?)
-    } else {
-        None
+    let separate = super::separate_streams(&settings);
+    let stream_encoder = |stream| -> Result<Option<AacEncoder>> {
+        if !separate.contains(&stream) {
+            return Ok(None);
+        }
+        Ok(Some(AacEncoder::for_stream(stream)?))
     };
-    let mut mic_encoder = if settings.microphone && settings.separate_audio_tracks {
-        Some(AacEncoder::new()?)
-    } else {
-        None
-    };
-    if let Some(e) = &mut pc_encoder {
-        e.stream = Stream::Desktop;
-    }
-    if let Some(e) = &mut mic_encoder {
-        e.stream = Stream::Microphone;
-    }
+    let mut pc_encoder = stream_encoder(Stream::Desktop)?;
+    let mut mic_encoder = stream_encoder(Stream::Microphone)?;
     let mut desktop = HashMap::new();
     let mut apps: HashMap<u32, (String, Endpoint)> = HashMap::new();
     let names = settings.application_names();
     let mut app_encoders = Vec::new();
-    if settings.desktop_audio && settings.separate_audio_tracks && settings.application_audio() {
-        for (i, name) in names.iter().enumerate() {
-            let mut e = AacEncoder::new()?;
-            e.stream = Stream::Application(i as u16);
-            app_encoders.push((name.clone(), e));
+    for (i, name) in names.iter().enumerate() {
+        if let Some(encoder) = stream_encoder(Stream::Application(i as u16))? {
+            app_encoders.push((name.clone(), encoder));
         }
     }
     let mut failed = HashSet::new();
