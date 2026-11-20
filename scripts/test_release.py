@@ -136,6 +136,16 @@ class ReleaseTests(unittest.TestCase):
             release.stage_draft(self.tag, self.files, self.notes)
         gh.assert_called_once_with("release", "upload", self.tag, str(self.sums), "--repo", release.REPOSITORY)
 
+    def test_new_draft_is_found_after_github_listing_lag(self):
+        # The listing missed the just-created draft in the v0.3.10 publish job.
+        lookups = [None, None, None, self.draft()]
+        with patch.object(release, "release_info", side_effect=lookups), \
+                patch.object(release, "gh") as gh, patch.object(release.time, "sleep") as sleep:
+            release.stage_draft(self.tag, self.files, self.notes)
+        self.assertEqual(sleep.call_count, 2)
+        self.assertEqual(gh.call_args_list[0].args[:2], ("release", "create"))
+        self.assertEqual(sum(call.args[:2] == ("release", "upload") for call in gh.call_args_list), 2)
+
     def test_published_missing_assets_are_never_added(self):
         with patch.object(release, "api", return_value=self.draft(draft=False)), patch.object(release, "gh") as gh:
             with self.assertRaisesRegex(ValueError, "never changed"):

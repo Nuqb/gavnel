@@ -157,7 +157,10 @@ def stage_draft(tag, files, notes):
         gh("release", "create", tag, "--repo", REPOSITORY, "--verify-tag", "--draft",
            "--target", run("git", "rev-parse", "HEAD"), "--title", f"Gavnel {tag}",
            "--notes-file", str(notes))
-        existing = release_info(tag)
+        # GitHub's release listing can lag a new draft by several seconds.
+        deadline = time.monotonic() + 60
+        while not (existing := release_info(tag)) and time.monotonic() < deadline:
+            time.sleep(5)
     if not existing or existing.get("prerelease"):
         raise ValueError("Expected a stable release draft.")
     if (existing.get("body") or "").strip() != notes.read_text(encoding="utf-8").strip():
