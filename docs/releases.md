@@ -42,18 +42,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/launch.ps1 -BuildOnl
 
 CI runs formatting, Python tests (including release safety and license inventory),
 localization checks, Rust tests, and strict Clippy. On pushes to `main`, a parallel
-job also builds the static-runtime executable and saves its distribution cache.
-Debug and distribution caches are separate and can reuse dependencies across
-lockfile changes. The first build is cold; later release tags can restore caches
-from `main`. Do not expect one version tag to restore another tag's cache.
+job also packages the static-runtime installer with `package-release.ps1` (including
+the native editor self-test), keeps it for 14 days as the `installer-COMMIT` artifact,
+and saves its distribution cache. Debug and distribution caches are separate and can
+reuse dependencies across lockfile changes. The first build is cold; later release
+tags can restore caches from `main`. Do not expect one version tag to restore another
+tag's cache.
 
 ## What the Release workflow does
 
 Before building, it validates the stable tag, checked-out commit, ancestry on
 `main`, package and lockfile versions, changelog, release notes, and release
-availability. It repeats the shared checks, packages the optimized executable,
-licenses, and notices, then tests the installed native editor, update helper, and
-uninstaller in disposable directories.
+availability. If a successful `main` CI run for the tagged commit kept its
+installer artifact, Release reuses that installer: CI has already run the shared
+checks and packaged it from the same commit. Otherwise (a tag pushed without a
+passing CI run, or an expired artifact) Release repeats the shared checks and
+packages the optimized executable, licenses, and notices itself. Either way it then
+tests the installed native editor, update helper, and uninstaller in disposable
+directories, using the exact installer that will be published.
 
 The tested installer and `SHA256SUMS.txt` are retained as a workflow artifact for
 14 days. A separate publishing job with write permission creates or resumes a

@@ -23,7 +23,8 @@ jobs:
         shell: pwsh
         run: ./scripts/check.ps1
   distribution:
-    # Default-branch caches are visible to version tags; caches from older tags are not.
+    # Packages the installer a release tag of this commit tests and publishes,
+    # and warms the default-branch cache for releases that must rebuild.
     if: github.event_name == 'push'
     runs-on: windows-2025
     timeout-minutes: 30
@@ -36,5 +37,16 @@ jobs:
       - uses: ./.github/actions/rust
         with:
           profile: distribution
-      - name: Warm installer build
-        run: cargo build --release --locked --target x86_64-pc-windows-msvc --target-dir target/distribution
+      - name: Build installer and notices
+        shell: pwsh
+        run: ./scripts/package-release.ps1
+      - name: Keep installer for release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          path: |
+            work/releases/*/Gavnel-Setup-*-x64.exe
+            work/releases/*/SHA256SUMS.txt
+          name: installer-${{ github.sha }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

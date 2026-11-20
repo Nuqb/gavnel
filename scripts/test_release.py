@@ -99,6 +99,26 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, "run", side_effect=["tagged", "other"]), self.assertRaisesRegex(ValueError, "does not match"):
             release.preflight(self.tag)
 
+    def test_release_reuses_only_a_successful_ci_installer_for_the_tagged_commit(self):
+        artifact = {"name": "installer-fixture-sha", "expired": False}
+        responses = {
+            "actions/workflows/ci.yml/runs": {"workflow_runs": [
+                {"id": 1, "head_sha": "other-sha", "conclusion": "success"},
+                {"id": 2, "head_sha": "fixture-sha", "conclusion": "failure"},
+                {"id": 3, "head_sha": "fixture-sha", "conclusion": "success"},
+            ]},
+            "actions/runs/3/artifacts": {"artifacts": [{"name": "installer-other", "expired": False}, artifact]},
+        }
+        lookup = lambda resource: responses.get(resource.split("?")[0])
+        with patch.object(release, "api", side_effect=lookup):
+            self.assertEqual(release.ci_installer(self.tag), 3)
+            artifact["expired"] = True
+            self.assertIsNone(release.ci_installer(self.tag))
+
+    def test_missing_ci_run_falls_back_to_building(self):
+        with patch.object(release, "api", return_value=None):
+            self.assertIsNone(release.ci_installer(self.tag))
+
     def test_installer_tampering_is_rejected(self):
         self.assertEqual(release.verified_files(self.tag, self.root), self.files)
         self.installer.write_bytes(b"MZtampered")

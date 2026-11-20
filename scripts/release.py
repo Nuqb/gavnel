@@ -6,6 +6,7 @@ Commands use argument arrays, never a shell; importing this module has no effect
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -96,6 +97,41 @@ def preflight(tag):
     run("git", "merge-base", "--is-ancestor", tagged, "origin/main")
     check_release_available(tag)
     print(f"Validated {tag}: version, lockfile, notes, changelog, main ancestry, and release availability.")
+
+
+def installer_artifact(sha):
+    """Name of the installer packaged by CI for this commit."""
+    return f"installer-{sha}"
+
+
+def ci_installer(tag):
+    """Find a successful main CI run that packaged the tagged commit.
+
+    Release then tests and publishes that installer instead of rebuilding it.
+    Returns the run ID, or None when Release must build the installer itself.
+    """
+    source_notes(tag)
+    sha = run("git", "rev-parse", "HEAD")
+    runs = api(f"actions/workflows/ci.yml/runs?head_sha={sha}&event=push&branch=main"
+               "&status=success&per_page=20") or {}
+    for workflow_run in runs.get("workflow_runs", []):
+        if workflow_run.get("head_sha") != sha or workflow_run.get("conclusion") != "success":
+            continue
+        artifacts = api(f"actions/runs/{workflow_run['id']}/artifacts?per_page=100") or {}
+        for artifact in artifacts.get("artifacts", []):
+            if artifact.get("name") == installer_artifact(sha) and not artifact.get("expired"):
+                return workflow_run["id"]
+    return None
+
+
+def report_ci_installer(tag):
+    identity = ci_installer(tag)
+    print(f"Reusing installer from CI run {identity}." if identity
+          else "No CI installer for this commit; Release will build it.")
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as stream:
+            stream.write(f"run-id={identity or ''}\n")
 
 
 def verified_files(tag, directory):
@@ -248,7 +284,7 @@ def ship(tag, resume):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for command in ("preflight", "publish", "ship"):
+    for command in ("preflight", "ci-installer", "publish", "ship"):
         child = commands.add_parser(command)
         child.add_argument("--tag", required=True)
         if command == "publish":
@@ -259,6 +295,8 @@ def main():
     try:
         if args.command == "preflight":
             preflight(args.tag)
+        elif args.command == "ci-installer":
+            report_ci_installer(args.tag)
         elif args.command == "publish":
             publish(args.tag, args.directory)
         else:
