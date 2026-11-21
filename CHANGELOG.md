@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.3.11
+## 0.3.12
 
 - Animate remaining Library clips into place after a deletion and confirm it with a brief toast. Deleted clips no longer reappear from an in-flight library scan and are removed from the montage selection.
 - Select the clip in File Explorer when revealing it, instead of only opening its folder.

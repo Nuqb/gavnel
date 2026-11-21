@@ -55,7 +55,8 @@ jobs:
           name: installer-${{ steps.source.outputs.commit }}
           run-id: ${{ steps.ci.outputs.run-id }}
           github-token: ${{ github.token }}
-          path: work/releases/${{ env.RELEASE_TAG }}
+          # CI uploads work/releases/*/..., so the artifact already contains the tag folder.
+          path: work/releases
       - uses: ./.github/actions/rust
         with:
           profile: checks
