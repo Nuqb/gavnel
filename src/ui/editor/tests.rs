@@ -180,7 +180,11 @@ fn editor_icon(output: &egui::FullOutput, ctx: &egui::Context, name: &'static st
 }
 #[test]
 fn editor_controls_fit_and_crop_and_audio_are_reachable() {
-    for size in [Vec2::new(1000.0, 650.0), Vec2::new(1280.0, 820.0)] {
+    for size in [
+        Vec2::new(1000.0, 650.0),
+        Vec2::new(1280.0, 820.0),
+        Vec2::new(1920.0, 1080.0),
+    ] {
         for tab in [Tab::Trim, Tab::Crop, Tab::Audio] {
             let mut h = Harness::new(size, tab);
             h.frame(vec![]);
@@ -192,6 +196,12 @@ fn editor_controls_fit_and_crop_and_audio_are_reachable() {
                     "{label}: {rect:?}"
                 );
             }
+            let play = editor_icon(&output, &h.ctx, "editor-play");
+            let bottom_gap = size.y - play.bottom();
+            assert!(
+                (28.0..=55.0).contains(&bottom_gap),
+                "unused space beneath transport at {size:?}: {bottom_gap}"
+            );
             let active = match tab {
                 Tab::Trim | Tab::Audio => "editor-reset",
                 Tab::Crop => "editor-center",

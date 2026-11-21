@@ -440,7 +440,37 @@ pub fn open(path: &Path) -> Result<()> {
     Ok(())
 }
 pub fn reveal(path: &Path) -> Result<()> {
-    open(path.parent().unwrap_or(path))
+    let path = std::path::absolute(path)?;
+    std::thread::Builder::new()
+        .name("gavnel-reveal".into())
+        .spawn(move || {
+            if let Err(error) = select_in_explorer(&path) {
+                eprintln!(
+                    "Could not select {} in File Explorer: {error}",
+                    path.display()
+                );
+            }
+        })?;
+    Ok(())
+}
+
+fn select_in_explorer(path: &Path) -> Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::{
+        System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoTaskMemFree, CoUninitialize},
+        UI::Shell::{SHOpenFolderAndSelectItems, SHParseDisplayName},
+    };
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    unsafe {
+        CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok()?;
+        let mut item = std::ptr::null_mut();
+        let result = SHParseDisplayName(PCWSTR(wide.as_ptr()), None, &mut item, 0, None)
+            .and_then(|()| SHOpenFolderAndSelectItems(item, None, 0));
+        CoTaskMemFree(Some(item.cast()));
+        CoUninitialize();
+        result?;
+    }
+    Ok(())
 }
 pub fn startup(enabled: bool) -> Result<()> {
     unsafe {

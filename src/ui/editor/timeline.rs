@@ -1,5 +1,9 @@
 use super::*;
 use egui::{Pos2, Rect, Sense, Stroke, StrokeKind};
+
+pub(super) const HEIGHT: f32 = 100.0;
+pub(super) const TOP_GAP: f32 = 10.0;
+
 fn ruler_step(duration: f64, width: f32) -> f64 {
     let target = duration / (width / 95.0).max(1.0) as f64;
     [
@@ -74,9 +78,9 @@ impl Editor {
         else {
             return;
         };
-        ui.add_space(10.0);
+        ui.add_space(TOP_GAP);
         let (rect, response) = ui.allocate_exact_size(
-            Vec2::new(ui.available_width(), 100.0),
+            Vec2::new(ui.available_width(), HEIGHT),
             Sense::click_and_drag(),
         );
         ui.painter()

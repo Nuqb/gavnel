@@ -10,6 +10,7 @@ mod editor;
 use crate::typography as fonts;
 mod highlights;
 mod language;
+mod library_deletion;
 mod library_view;
 mod microphone_test;
 mod motion;
@@ -147,6 +148,7 @@ pub struct Gavnel {
     add_game_dialog: Option<add_game::Dialog>,
     delete_pending: Option<PathBuf>,
     delete_error: Option<String>,
+    library_deletion: library_deletion::Feedback,
     rename_dialog: Option<rename::Dialog>,
     last_saved: u64,
     last_library: Instant,
@@ -252,6 +254,7 @@ impl Gavnel {
             add_game_dialog: None,
             delete_pending: None,
             delete_error: None,
+            library_deletion: library_deletion::Feedback::default(),
             rename_dialog: None,
             last_saved: 0,
             last_library: Instant::now(),
@@ -510,30 +513,7 @@ impl eframe::App for Gavnel {
                 self.player = None;
             }
             self.show_rename_dialog(ctx);
-            if let Some(path) = self.delete_pending.clone() {
-                let clip = self
-                    .library
-                    .clips
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .find(|clip| clip.path == path)
-                    .cloned();
-                match delete::show(ctx, &path, clip.as_ref(), self.delete_error.as_deref()) {
-                delete::Action::Cancel => { self.delete_pending = None; self.delete_error = None; },
-                delete::Action::Delete => match crate::library::delete_capture(&path) {
-                    Ok(()) => {
-                        self.textures.remove(&path);
-                        self.library.refresh(&self.settings.clips_dir);
-                        self.message = tr("Clip deleted.").into();
-                        self.delete_pending = None;
-                        self.delete_error = None;
-                    },
-                    Err(_) => self.delete_error = Some(tr("Could not delete this clip. It may have moved or be open in another player. Close this dialog and refresh the Library, then try again.").into()),
-                },
-                delete::Action::None => {},
-            }
-            }
+            i18n::with_language(self.settings.language, || self.show_library_deletion(ctx));
         });
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {

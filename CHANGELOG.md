@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.3.11
+
+- Animate remaining Library clips into place after a deletion and confirm it with a brief toast. Deleted clips no longer reappear from an in-flight library scan and are removed from the montage selection.
+- Select the clip in File Explorer when revealing it, instead of only opening its folder.
+- Size the editor preview to fill the window above the timeline, and show editor errors above the preview.
+
 ## 0.3.10
 
 - Fix separate-audio-track clips playing only the microphone in Gavnel and Windows players. Separate tracks are encoded at 160 kbps so players default to the 192 kbps combined mix, and Gavnel's player selects the combined mix in existing clips.

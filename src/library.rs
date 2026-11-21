@@ -3,6 +3,7 @@ use crossbeam_channel::{Sender, bounded};
 pub use rename::rename_capture;
 use std::{
     path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
     sync::{Arc, Mutex},
     time::SystemTime,
 };
@@ -37,6 +38,7 @@ impl Clip {
 }
 pub struct Library {
     pub clips: Arc<Mutex<Vec<Clip>>>,
+    revision: Arc<AtomicU64>,
     refresh: Sender<Job>,
     pub notice: Arc<Mutex<Option<String>>>,
 }
@@ -45,7 +47,7 @@ enum Job {
     Organize(PathBuf),
 }
 
-pub fn delete_capture(path: &Path) -> std::io::Result<()> {
+fn delete_capture(path: &Path) -> std::io::Result<()> {
     std::fs::remove_file(path)?;
     if path
         .extension()
@@ -63,6 +65,8 @@ impl Library {
     pub fn new(ctx: eframe::egui::Context, visible: Arc<std::sync::atomic::AtomicBool>) -> Self {
         let clips = Arc::new(Mutex::new(Vec::new()));
         let shared = clips.clone();
+        let revision = Arc::new(AtomicU64::new(0));
+        let scan_revision = revision.clone();
         let notice = Arc::new(Mutex::new(None));
         let shared_notice = notice.clone();
         let (tx, rx) = bounded::<Job>(4);
@@ -80,8 +84,13 @@ impl Library {
                             folder
                         }
                     };
+                    let revision = scan_revision.load(Ordering::Relaxed);
                     let result = scan(&folder);
-                    *shared.lock().unwrap() = result;
+                    let mut clips = shared.lock().unwrap();
+                    if scan_revision.load(Ordering::Relaxed) == revision {
+                        *clips = result;
+                    }
+                    drop(clips);
                     if visible.load(std::sync::atomic::Ordering::Relaxed) {
                         ctx.request_repaint();
                     }
@@ -90,9 +99,18 @@ impl Library {
             .expect("Could not start clip library");
         Self {
             clips,
+            revision,
             refresh: tx,
             notice,
         }
+    }
+    pub fn delete(&self, path: &Path) -> std::io::Result<()> {
+        let mut clips = self.clips.lock().unwrap();
+        delete_capture(path)?;
+        // A scan already in flight may still contain the deleted capture.
+        self.revision.fetch_add(1, Ordering::Relaxed);
+        clips.retain(|clip| clip.path != path);
+        Ok(())
     }
     pub fn refresh(&self, folder: &Path) {
         let _ = self.refresh.try_send(Job::Refresh(folder.to_owned()));
@@ -171,7 +189,7 @@ fn scan(folder: &Path) -> Vec<Clip> {
             });
         }
     }
-    clips.sort_by_key(|c| std::cmp::Reverse(c.modified));
+    clips.sort_by(|a, b| b.modified.cmp(&a.modified).then(a.path.cmp(&b.path)));
     clips
 }
 

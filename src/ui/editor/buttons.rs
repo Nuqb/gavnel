@@ -1,4 +1,7 @@
 use super::*;
+
+pub(super) const ICON_SIZE: f32 = 20.0;
+
 #[derive(Clone, Copy)]
 pub(super) enum Icon {
     Trim,
@@ -57,7 +60,7 @@ impl Icon {
             ),
         };
         let texture = crate::icons::texture(ui.ctx(), name, svg, 32);
-        egui::Image::new((texture.id(), Vec2::splat(20.0))).tint(TEXT)
+        egui::Image::new((texture.id(), Vec2::splat(ICON_SIZE))).tint(TEXT)
     }
 }
 pub(super) fn button(ui: &mut egui::Ui, icon: Icon, label: &str) -> egui::Response {

@@ -23,27 +23,7 @@ impl Editor {
             }
             ui.add_space(8.0);
             let previous_tab = self.tab;
-            let available = ui.available_size();
-            let preview_h = (available.y - 220.0).clamp(140.0, 430.0);
-            ui.horizontal_top(|ui| {
-                ui.allocate_ui_with_layout(
-                    Vec2::new((available.x - 280.0).max(320.0), preview_h),
-                    egui::Layout::top_down(egui::Align::Min),
-                    |ui| {
-                        self.preview_canvas(ui, player);
-                    },
-                );
-                ui.allocate_ui_with_layout(
-                    Vec2::new(260.0, preview_h),
-                    egui::Layout::top_down(egui::Align::Min),
-                    |ui| {
-                        ui.set_width(260.0);
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            self.controls(ui);
-                        });
-                    },
-                );
-            });
+            self.preview_and_controls(ui, player);
             if previous_tab != Tab::Crop && self.tab == Tab::Crop {
                 if let Some(p) = player.as_ref() {
                     let _ = p.pause();
@@ -58,41 +38,7 @@ impl Editor {
                 }
                 *player = None;
             }
-            ui.horizontal(|ui| {
-                let playing = player.as_ref().is_some_and(|p| !p.paused() && !p.ended());
-                if buttons::button(
-                    ui,
-                    if playing {
-                        buttons::Icon::Pause
-                    } else {
-                        buttons::Icon::Play
-                    },
-                    if playing { "Pause" } else { "Play" },
-                )
-                .on_hover_text(tr("Play / pause · Space"))
-                .clicked()
-                {
-                    self.play_requested = true;
-                }
-                if self.preview_job.is_some() {
-                    ui.spinner();
-                    ui.label(tr("Preparing playback…"));
-                    if ui.button(tr("Cancel")).clicked()
-                        && let Some((_, cancel)) = self.preview_job.take()
-                    {
-                        cancel.store(true, Ordering::Release);
-                    }
-                }
-                ui.label(format!(
-                    "{} / {}",
-                    playback::time(self.cursor),
-                    playback::time(
-                        self.project.as_ref().unwrap().segments[self.selected]
-                            .info
-                            .duration
-                    )
-                ));
-            });
+            self.transport_row(ui, player.as_ref());
             let changed = self.project.as_ref() != Some(&before);
             if changed {
                 *player = None;
@@ -109,5 +55,68 @@ impl Editor {
                 ui.ctx().request_repaint_after(Duration::from_millis(50));
             }
         }
+    }
+
+    fn preview_and_controls(
+        &mut self,
+        ui: &mut egui::Ui,
+        player: &mut Option<crate::player::Player>,
+    ) {
+        let available = ui.available_size();
+        let spacing = ui.spacing();
+        let button_height = buttons::ICON_SIZE + 2.0 * spacing.button_padding.y;
+        let transport_height = spacing.interact_size.y.max(button_height);
+        let footer =
+            timeline::HEIGHT + timeline::TOP_GAP + transport_height + 2.0 * spacing.item_spacing.y;
+        let preview_height = (available.y - footer).max(140.0);
+        ui.horizontal_top(|ui| {
+            ui.allocate_ui_with_layout(
+                Vec2::new((available.x - 280.0).max(320.0), preview_height),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| self.preview_canvas(ui, player),
+            );
+            ui.allocate_ui_with_layout(
+                Vec2::new(260.0, preview_height),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.set_width(260.0);
+                    egui::ScrollArea::vertical().show(ui, |ui| self.controls(ui));
+                },
+            );
+        });
+    }
+
+    fn transport_row(&mut self, ui: &mut egui::Ui, player: Option<&crate::player::Player>) {
+        ui.horizontal(|ui| {
+            let playing = player.is_some_and(|p| !p.paused() && !p.ended());
+            let (icon, label) = if playing {
+                (buttons::Icon::Pause, "Pause")
+            } else {
+                (buttons::Icon::Play, "Play")
+            };
+            if buttons::button(ui, icon, label)
+                .on_hover_text(tr("Play / pause · Space"))
+                .clicked()
+            {
+                self.play_requested = true;
+            }
+            if self.preview_job.is_some() {
+                ui.spinner();
+                ui.label(tr("Preparing playback…"));
+                if ui.button(tr("Cancel")).clicked()
+                    && let Some((_, cancel)) = self.preview_job.take()
+                {
+                    cancel.store(true, Ordering::Release);
+                }
+            }
+            let duration = self.project.as_ref().unwrap().segments[self.selected]
+                .info
+                .duration;
+            ui.label(format!(
+                "{} / {}",
+                playback::time(self.cursor),
+                playback::time(duration)
+            ));
+        });
     }
 }

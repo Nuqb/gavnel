@@ -3,6 +3,7 @@ use super::*;
 use egui::{Align, Layout, Rect, Sense, Stroke, StrokeKind};
 impl Gavnel {
     pub(super) fn clips(&mut self, ui: &mut egui::Ui, status: &Status) {
+        self.library_deletion.begin_frame(ui.input(|i| i.time));
         let all = self.library.clips.lock().unwrap().clone();
         ui.horizontal(|ui| {
             ui.label(RichText::new(tr("Library")).size(27.0).strong());
@@ -135,6 +136,7 @@ impl Gavnel {
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
+                self.library_deletion.set_origin(ui.next_widget_position());
                 if self.settings.library_group_by_game {
                     let mut names: Vec<_> = clips.iter().map(|c| c.source.clone()).collect();
                     names.sort();

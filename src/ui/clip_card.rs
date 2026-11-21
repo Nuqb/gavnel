@@ -68,20 +68,37 @@ impl Gavnel {
             ui.horizontal_top(|ui| {
                 ui.spacing_mut().item_spacing.x = gap;
                 for clip in row {
-                    ui.allocate_ui_with_layout(
-                        Vec2::new(width, width * 9.0 / 16.0 + 78.0),
-                        Layout::top_down(Align::Min),
-                        |ui| {
-                            ui.set_width(width);
-                            self.clip_card(ui, clip, width);
-                        },
-                    );
+                    self.clip_slot(ui, clip, width);
                 }
             });
             ui.add_space(6.0);
         }
     }
-    pub(super) fn clip_card(&mut self, ui: &mut egui::Ui, clip: &Clip, width: f32) {
+    fn clip_slot(&mut self, ui: &mut egui::Ui, clip: &Clip, width: f32) {
+        let size = Vec2::new(width, width * 9.0 / 16.0 + 78.0);
+        let layout = Layout::top_down(Align::Min);
+        ui.allocate_ui_with_layout(size, layout, |ui| {
+            let slot = Rect::from_min_size(ui.next_widget_position(), size);
+            let offset = self.library_deletion.card_offset(
+                ui,
+                &clip.path,
+                slot,
+                self.delete_pending.is_some(),
+            );
+            // Reserve the destination in the grid while the card travels.
+            ui.set_min_size(size);
+            let mut card = ui.new_child(
+                egui::UiBuilder::new()
+                    .scope_id(egui::Id::unique(("library-clip", &clip.path)))
+                    .layout(layout)
+                    .max_rect(slot.translate(offset)),
+            );
+            card.set_width(width);
+            self.clip_card(&mut card, clip, width);
+        });
+    }
+
+    fn clip_card(&mut self, ui: &mut egui::Ui, clip: &Clip, width: f32) {
         let saving = self.saves.status(&clip.path);
         let visible = ui.clip_rect().intersects(Rect::from_min_size(
             ui.next_widget_position(),

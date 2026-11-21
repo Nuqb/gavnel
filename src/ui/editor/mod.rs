@@ -267,6 +267,14 @@ impl Gavnel {
                 ui.spinner();
                 ui.label(tr("Opening clips…"));
             }
+            if !editor.error.is_empty() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.colored_label(DANGER, &editor.error);
+                    if ui.small_button(tr("Dismiss")).clicked() {
+                        editor.error.clear();
+                    }
+                });
+            }
             editor.update_cursor(&mut self.player);
             editor.body(ui, &self.media, &mut self.player);
             if editor.play_requested {
@@ -290,14 +298,6 @@ impl Gavnel {
             }
             if editor.preview_job.is_some() {
                 ui.ctx().request_repaint_after(Duration::from_millis(50));
-            }
-            if !editor.error.is_empty() {
-                ui.horizontal_wrapped(|ui| {
-                    ui.colored_label(DANGER, &editor.error);
-                    if ui.small_button(tr("Dismiss")).clicked() {
-                        editor.error.clear();
-                    }
-                });
             }
             editor.save_video_dialog(ui, &self.media);
         });
